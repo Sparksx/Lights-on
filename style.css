@@ -18,6 +18,109 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* === MODE SELECTION LANDING PAGE === */
+#mode-select {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Title centered on the split */
+#mode-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  letter-spacing: 12px;
+  z-index: 102;
+  pointer-events: none;
+  /* Split coloring via background-clip */
+  background: linear-gradient(to right, #fff 50%, #000 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* Ensure text stays crisp on the boundary */
+  text-align: center;
+  white-space: nowrap;
+}
+
+.mode-half {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: flex 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-half-dark {
+  background: #000;
+}
+
+.mode-half-light {
+  background: #fff;
+}
+
+.mode-label {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: clamp(0.7rem, 2vw, 1rem);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  position: absolute;
+  bottom: 20%;
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+.mode-half-dark .mode-label {
+  color: #fff;
+}
+
+.mode-half-light .mode-label {
+  color: #000;
+}
+
+.mode-half:hover .mode-label {
+  opacity: 0.8;
+}
+
+/* Portrait: split top/bottom */
+@media (orientation: portrait) {
+  #mode-select {
+    flex-direction: column;
+  }
+  #mode-title {
+    background: linear-gradient(to bottom, #fff 50%, #000 50%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}
+
+/* Click animation: chosen side takes over */
+#mode-select.choosing .mode-half.chosen {
+  flex: 20;
+}
+#mode-select.choosing .mode-half:not(.chosen) {
+  flex: 0;
+}
+#mode-select.choosing #mode-title {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+#mode-select.choosing .mode-label {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
 /* === GAME AREA === */
 #game-area {
   position: relative;
@@ -379,4 +482,113 @@ html, body {
   .upgrade-item {
     padding: 10px;
   }
+}
+
+/* ============================================
+   MODE OFF — Inverted theme (white → dark)
+   ============================================ */
+
+body.mode-off {
+  background: #fff;
+  color: #000;
+}
+
+body.mode-off #game-area {
+  background: #fff;
+}
+
+body.mode-off #progress-fill {
+  background: #000;
+}
+
+body.mode-off #upgrade-toggle::after {
+  background: #000;
+}
+
+body.mode-off #upgrade-panel {
+  background: #fff;
+  border-left: 1px solid #000;
+}
+
+body.mode-off #lumen-counter {
+  color: #000;
+}
+
+body.mode-off #upgrade-close {
+  color: #000;
+}
+
+body.mode-off #upgrade-panel-header {
+  border-bottom: 1px solid #000;
+}
+
+body.mode-off .upgrade-item {
+  border-color: #000;
+  color: #000;
+}
+
+body.mode-off .upgrade-item:hover:not(.locked):not(.maxed) {
+  background: #000;
+  color: #fff;
+}
+
+body.mode-off .upgrade-item.affordable:not(.maxed) {
+  animation: pulse-off 2s ease-in-out infinite;
+}
+
+@keyframes pulse-off {
+  0%, 100% { border-color: rgba(0, 0, 0, 0.4); }
+  50% { border-color: rgba(0, 0, 0, 1); }
+}
+
+body.mode-off #reset-btn, body.mode-off #dev-btn {
+  border-color: rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.3);
+}
+
+body.mode-off #reset-btn:hover, body.mode-off #dev-btn:hover {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+body.mode-off #switch-plate {
+  border-color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.mode-off #switch-plate:hover {
+  border-color: rgba(0, 0, 0, 1);
+}
+
+body.mode-off #switch-lever {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+body.mode-off #switch-plate:hover #switch-lever {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+body.mode-off #switch-lever.on {
+  background: #000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+body.mode-off #switch-hint {
+  color: #000;
+}
+
+body.mode-off #victory-screen {
+  background: #000;
+  color: #fff;
+}
+
+body.mode-off #restart-btn {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+body.mode-off #restart-btn:hover {
+  background: #000;
+  color: #fff;
 }
