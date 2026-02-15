@@ -1,7 +1,7 @@
 {
-  "name": "Lights On",
-  "short_name": "Lights On",
-  "description": "Ramenez la lumière.",
+  "name": "Light",
+  "short_name": "Light",
+  "description": "Lumière ou ténèbres. Choisissez.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

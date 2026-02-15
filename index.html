@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <title>Lights On</title>
+  <title>Light</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -12,13 +12,24 @@
   <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Lights On">
+  <meta name="apple-mobile-web-app-title" content="Light">
   <link rel="apple-touch-icon" href="icons/icon.svg">
 
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="game-area">
+  <!-- MODE SELECTION LANDING PAGE -->
+  <div id="mode-select">
+    <div id="mode-off" class="mode-half mode-half-dark">
+      <div class="mode-label">OFF</div>
+    </div>
+    <div id="mode-on" class="mode-half mode-half-light">
+      <div class="mode-label">ON</div>
+    </div>
+    <div id="mode-title">LIGHT</div>
+  </div>
+
+  <div id="game-area" class="hidden">
     <canvas id="halo-canvas"></canvas>
 
     <div id="progress-bar">
@@ -49,8 +60,8 @@
     </div>
 
     <div id="victory-screen" class="hidden">
-      <h1>LIGHTS ON</h1>
-      <p>Vous avez ramené la lumière.</p>
+      <h1 id="victory-title">LIGHTS ON</h1>
+      <p id="victory-text">Vous avez ramené la lumière.</p>
       <button id="restart-btn">Recommencer</button>
     </div>
   </div>

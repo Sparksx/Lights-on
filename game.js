@@ -1,7 +1,78 @@
-// === LIGHTS ON — Clicker Game ===
+// === LIGHT — Clicker Game (On / Off modes) ===
 
 (function () {
   'use strict';
+
+  // --- Game Mode ---
+  // 'on' = classic (dark→light), 'off' = inverted (light→dark)
+  let gameMode = null; // set by landing page
+  let gameStarted = false;
+
+  // --- Mode Selection Landing Page ---
+  const modeSelect = document.getElementById('mode-select');
+  const modeOn = document.getElementById('mode-on');
+  const modeOff = document.getElementById('mode-off');
+
+  function startGame(mode) {
+    if (gameStarted) return;
+    gameStarted = true;
+    gameMode = mode;
+
+    // Animate the chosen side taking over
+    const chosenEl = mode === 'on' ? modeOn : modeOff;
+    chosenEl.classList.add('chosen');
+    modeSelect.classList.add('choosing');
+
+    if (mode === 'off') {
+      document.body.classList.add('mode-off');
+    }
+
+    // Update victory text based on mode
+    const victoryTitle = document.getElementById('victory-title');
+    const victoryText = document.getElementById('victory-text');
+    const switchHint = document.getElementById('switch-hint');
+    if (mode === 'off') {
+      victoryTitle.textContent = 'LIGHTS OFF';
+      victoryText.textContent = 'Vous avez éteint la lumière.';
+      switchHint.textContent = 'Éteignez la lumière';
+    } else {
+      victoryTitle.textContent = 'LIGHTS ON';
+      victoryText.textContent = 'Vous avez ramené la lumière.';
+      switchHint.textContent = 'Allumez la lumière';
+    }
+
+    // Save chosen mode
+    try { localStorage.setItem('light-game-mode', mode); } catch(_) {}
+
+    // After animation, reveal the game
+    setTimeout(function () {
+      modeSelect.style.display = 'none';
+      document.getElementById('game-area').classList.remove('hidden');
+      resizeCanvas();
+      initGame();
+    }, 700);
+  }
+
+  modeOn.addEventListener('click', function () { startGame('on'); });
+  modeOff.addEventListener('click', function () { startGame('off'); });
+
+  // Check for saved game — skip landing if save exists
+  (function checkSavedGame() {
+    try {
+      var savedMode = localStorage.getItem('light-game-mode');
+      // Also check legacy save
+      var hasOnSave = localStorage.getItem('lights-on-save');
+      var hasOffSave = localStorage.getItem('lights-off-save');
+      if (savedMode === 'off' && hasOffSave) {
+        startGame('off');
+      } else if (savedMode === 'on' && hasOnSave) {
+        startGame('on');
+      } else if (!savedMode && hasOnSave) {
+        // Legacy save from before mode selection
+        startGame('on');
+      }
+    } catch(_) {}
+  })();
 
   // --- State ---
   const state = {
@@ -16,7 +87,21 @@
 
   // --- Constants ---
   const VICTORY_LUMENS = 1000000000000;
-  const SAVE_KEY = 'lights-on-save';
+  function getSaveKey() {
+    return gameMode === 'off' ? 'lights-off-save' : 'lights-on-save';
+  }
+
+  // --- Color helpers for mode-aware rendering ---
+  function rgb(r, g, b) {
+    if (gameMode === 'off') {
+      return (255 - r) + ', ' + (255 - g) + ', ' + (255 - b);
+    }
+    return r + ', ' + g + ', ' + b;
+  }
+
+  function rgba(r, g, b, a) {
+    return 'rgba(' + rgb(r, g, b) + ', ' + a + ')';
+  }
 
   // --- Upgrades Definition ---
   const UPGRADES = [
@@ -286,6 +371,50 @@
     },
   ];
 
+  // --- Shadow-themed names/descriptions for Off mode ---
+  // Maps upgrade id → { name, desc } for the "Lights Off" universe
+  const SHADOW_THEME = {
+    spark:         { name: 'Ombre',           desc: 'Frotte, et l\'obscurité naît' },
+    firefly:       { name: 'Phalène',         desc: 'Danse autour de la dernière flamme' },
+    candle:        { name: 'Fumée',           desc: 'La flamme meurt, la fumée reste' },
+    prism:         { name: 'Obsidienne',      desc: 'Un rayon entre, aucun n\'en sort' },
+    lantern:       { name: 'Lanterne sourde', desc: 'La flamme emprisonnée s\'éteint' },
+    lightning:     { name: 'Foudre noire',    desc: 'Frappe et obscurcit' },
+    lighthouse:    { name: 'Phare éteint',    desc: 'Ne guide plus personne' },
+    aurora:        { name: 'Crépuscule',      desc: 'Le ciel perd ses couleurs' },
+    star:          { name: 'Étoile morte',    desc: 'Quatre milliards d\'années de silence' },
+    supernova:     { name: 'Trou noir',       desc: 'L\'étoile s\'effondre dans le vide' },
+    pulsar:        { name: 'Vortex',          desc: 'Un tourbillon dans le néant' },
+    nebula:        { name: 'Brume noire',     desc: 'Le linceul des soleils éteints' },
+    comet:         { name: 'Météore sombre',  desc: 'Une traînée de cendres et de nuit' },
+    quasar:        { name: 'Abîme',           desc: 'Plus profond qu\'un milliard de nuits' },
+    plasma:        { name: 'Antimatière',     desc: 'Le quatrième état du vide' },
+    constellation: { name: 'Oubli',           desc: 'Des histoires effacées du ciel' },
+    galaxy:        { name: 'Galaxie noire',   desc: 'Cent milliards d\'étoiles s\'éteignent' },
+    whitehole:     { name: 'Trou noir',       desc: 'Ce qui entre n\'est jamais rendu' },
+    darkmatter:    { name: 'Énergie sombre',  desc: 'Invisible, elle dévore l\'univers' },
+    bigbang:       { name: 'Big Crunch',      desc: 'Que l\'obscurité soit' },
+    cosmiclight:   { name: 'Nuit cosmique',   desc: 'L\'écho du dernier instant' },
+    multiverse:    { name: 'Néant',           desc: 'Chaque choix, un soleil de moins' },
+    eternity:      { name: 'Oubli éternel',   desc: 'Le temps n\'est plus qu\'une ombre' },
+    sun:           { name: 'Éclipse',         desc: '?' },
+  };
+
+  // Helper to get display name/desc based on current mode
+  function getUpgradeName(up) {
+    if (gameMode === 'off' && SHADOW_THEME[up.id]) return SHADOW_THEME[up.id].name;
+    return up.name;
+  }
+  function getUpgradeDesc(up) {
+    if (gameMode === 'off' && SHADOW_THEME[up.id]) return SHADOW_THEME[up.id].desc;
+    return up.desc;
+  }
+
+  // Unit name based on mode
+  function unitName() {
+    return gameMode === 'off' ? 'ob' : 'lm';
+  }
+
   // --- DOM refs ---
   const gameArea = document.getElementById('game-area');
   const canvas = document.getElementById('halo-canvas');
@@ -341,7 +470,7 @@
       const alpha = s.baseAlpha * twinkle;
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+      ctx.fillStyle = rgba(255, 255, 255, alpha);
       ctx.fill();
     }
   }
@@ -441,10 +570,10 @@
         ctx.moveTo(s1.x, s1.y);
         ctx.lineTo(s2.x, s2.y);
         if (edge.traced || c.completed) {
-          ctx.strokeStyle = 'rgba(200, 220, 255, ' + (alpha * 0.6) + ')';
+          ctx.strokeStyle = rgba(200, 220, 255, alpha * 0.6);
           ctx.lineWidth = 1.5;
         } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, ' + (alpha * 0.08) + ')';
+          ctx.strokeStyle = rgba(255, 255, 255, alpha * 0.08);
           ctx.lineWidth = 0.5;
         }
         ctx.stroke();
@@ -461,13 +590,13 @@
           const sparkle = 0.5 + 0.5 * Math.sin(c.sparklePhase + si * 1.3);
           ctx.beginPath();
           ctx.arc(s.x, s.y, starSize + sparkle * 4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(200, 220, 255, ' + (alpha * sparkle * 0.3) + ')';
+          ctx.fillStyle = rgba(200, 220, 255, alpha * sparkle * 0.3);
           ctx.fill();
         }
 
         ctx.beginPath();
         ctx.arc(s.x, s.y, starSize, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, ' + starAlpha + ')';
+        ctx.fillStyle = rgba(255, 255, 255, starAlpha);
         ctx.fill();
       }
 
@@ -478,7 +607,7 @@
         ctx.save();
         ctx.font = '12px "Courier New", monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(200, 220, 255, ' + (alpha * 0.7) + ')';
+        ctx.fillStyle = rgba(200, 220, 255, alpha * 0.7);
         ctx.fillText(c.name, cx, cy - 15);
         ctx.restore();
       }
@@ -491,7 +620,7 @@
       for (let i = 1; i < constellationDragPath.length; i++) {
         ctx.lineTo(constellationDragPath[i].x, constellationDragPath[i].y);
       }
-      ctx.strokeStyle = 'rgba(200, 220, 255, 0.3)';
+      ctx.strokeStyle = rgba(200, 220, 255, 0.3);
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -614,20 +743,20 @@
 
         ctx.beginPath();
         ctx.arc(tx, ty, trailSize, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(200, 220, 255, ' + trailAlpha + ')';
+        ctx.fillStyle = rgba(200, 220, 255, trailAlpha);
         ctx.fill();
       }
 
       // Main star
       ctx.beginPath();
       ctx.arc(px, py, 3, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillStyle = rgba(255, 255, 255, 0.9);
       ctx.fill();
 
       // Star glow
       const glow = ctx.createRadialGradient(px, py, 0, px, py, 12);
-      glow.addColorStop(0, 'rgba(200, 220, 255, 0.4)');
-      glow.addColorStop(1, 'rgba(200, 220, 255, 0)');
+      glow.addColorStop(0, rgba(200, 220, 255, 0.4));
+      glow.addColorStop(1, rgba(200, 220, 255, 0));
       ctx.beginPath();
       ctx.arc(px, py, 12, 0, Math.PI * 2);
       ctx.fillStyle = glow;
@@ -648,7 +777,7 @@
         else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
       }
       ctx.closePath();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillStyle = rgba(255, 255, 255, 0.7);
       ctx.fill();
       ctx.restore();
     }
@@ -815,7 +944,7 @@
       if (p.alpha <= 0) continue;
       ctx.beginPath();
       ctx.arc(p.x, p.y, Math.max(p.size, 0.5), 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, ' + Math.max(p.alpha, 0) + ')';
+      ctx.fillStyle = rgba(255, 255, 255, Math.max(p.alpha, 0));
       ctx.fill();
     }
 
@@ -824,8 +953,8 @@
       const intensity = bigBangProgress / 0.5;
       const r = 20 + intensity * 40;
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      grad.addColorStop(0, 'rgba(255, 255, 255, ' + (intensity * 0.8) + ')');
-      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      grad.addColorStop(0, rgba(255, 255, 255, intensity * 0.8));
+      grad.addColorStop(1, rgba(255, 255, 255, 0));
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = grad;
@@ -836,9 +965,9 @@
       // Big flash at the beginning of explosion
       const flashR = 50 + explodeProgress * 200;
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashR);
-      grad.addColorStop(0, 'rgba(255, 255, 240, ' + (intensity * 0.9) + ')');
-      grad.addColorStop(0.3, 'rgba(255, 255, 220, ' + (intensity * 0.4) + ')');
-      grad.addColorStop(1, 'rgba(255, 255, 200, 0)');
+      grad.addColorStop(0, rgba(255, 255, 240, intensity * 0.9));
+      grad.addColorStop(0.3, rgba(255, 255, 220, intensity * 0.4));
+      grad.addColorStop(1, rgba(255, 255, 200, 0));
       ctx.beginPath();
       ctx.arc(cx, cy, flashR, 0, Math.PI * 2);
       ctx.fillStyle = grad;
@@ -849,7 +978,7 @@
         const ringR = explodeProgress * Math.max(canvas.width, canvas.height);
         ctx.beginPath();
         ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, ' + ((1 - explodeProgress / 0.6) * 0.4) + ')';
+        ctx.strokeStyle = rgba(255, 255, 255, (1 - explodeProgress / 0.6) * 0.4);
         ctx.lineWidth = 3;
         ctx.stroke();
       }
@@ -942,8 +1071,8 @@
       if (h.type === 'glow') {
         const r = Math.max(radius, 1);
         const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        gradient.addColorStop(0, rgba(255, 255, 255, alpha));
+        gradient.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.beginPath();
         ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
@@ -953,16 +1082,16 @@
         const lineWidth = Math.max(0.5, 1.5 * h.life);
         ctx.beginPath();
         ctx.arc(h.x, h.y, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.strokeStyle = rgba(255, 255, 255, alpha);
         ctx.lineWidth = lineWidth;
         ctx.stroke();
       } else if (h.type === 'persist') {
         // Soft lingering glow — fixed size, fades slowly
         const r = h.maxRadius;
         const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.7})`);
-        gradient.addColorStop(0.4, `rgba(255, 255, 255, ${alpha * 0.3})`);
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        gradient.addColorStop(0, rgba(255, 255, 255, alpha * 0.7));
+        gradient.addColorStop(0.4, rgba(255, 255, 255, alpha * 0.3));
+        gradient.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.beginPath();
         ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
@@ -973,7 +1102,7 @@
         ctx.save();
         ctx.font = 'bold 16px "Courier New", monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillStyle = rgba(255, 255, 255, alpha);
         ctx.fillText(h.text, h.x, floatY);
         ctx.restore();
       } else if (h.type === 'combo-glow') {
@@ -984,9 +1113,9 @@
         const green = Math.floor(255 - w * 55);
         const blue = Math.floor(255 - w * 155);
         const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
-        gradient.addColorStop(0, 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + (alpha * 0.8) + ')');
-        gradient.addColorStop(0.5, 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + (alpha * 0.3) + ')');
-        gradient.addColorStop(1, 'rgba(' + red + ', ' + green + ', ' + blue + ', 0)');
+        gradient.addColorStop(0, rgba(red, green, blue, alpha * 0.8));
+        gradient.addColorStop(0.5, rgba(red, green, blue, alpha * 0.3));
+        gradient.addColorStop(1, rgba(red, green, blue, 0));
         ctx.beginPath();
         ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
@@ -1002,12 +1131,12 @@
         const lineWidth = Math.max(0.5, 2 * h.life);
         ctx.beginPath();
         ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alpha + ')';
+        ctx.strokeStyle = rgba(red, green, blue, alpha);
         ctx.lineWidth = lineWidth;
         ctx.stroke();
       } else if (h.type === 'screen-flash') {
         // Gentle full-screen flash for lightning bonus (epilepsy-safe)
-        ctx.fillStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+        ctx.fillStyle = rgba(255, 255, 255, alpha);
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else if (h.type === 'edge') {
         // Vignette glow from screen edges
@@ -1016,26 +1145,26 @@
         const thickness = h.maxRadius;
         // Top
         const topG = ctx.createLinearGradient(0, 0, 0, thickness);
-        topG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        topG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        topG.addColorStop(0, rgba(255, 255, 255, alpha));
+        topG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = topG;
         ctx.fillRect(0, 0, w, thickness);
         // Bottom
         const botG = ctx.createLinearGradient(0, ht, 0, ht - thickness);
-        botG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        botG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        botG.addColorStop(0, rgba(255, 255, 255, alpha));
+        botG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = botG;
         ctx.fillRect(0, ht - thickness, w, thickness);
         // Left
         const leftG = ctx.createLinearGradient(0, 0, thickness, 0);
-        leftG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        leftG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        leftG.addColorStop(0, rgba(255, 255, 255, alpha));
+        leftG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = leftG;
         ctx.fillRect(0, 0, thickness, ht);
         // Right
         const rightG = ctx.createLinearGradient(w, 0, w - thickness, 0);
-        rightG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        rightG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        rightG.addColorStop(0, rgba(255, 255, 255, alpha));
+        rightG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = rightG;
         ctx.fillRect(w - thickness, 0, thickness, ht);
       }
@@ -1102,6 +1231,8 @@
       updateUI();
     }
   }
+
+  // NOTE: halos use the rgba() helper in drawHalos so colors auto-invert
 
   function endRub() {
     isRubbing = false;
@@ -1320,7 +1451,8 @@
   }
 
   function renderUpgrades() {
-    lumenCounter.textContent = formatNumber(Math.floor(state.lumens)) + ' lm';
+    const unit = unitName();
+    lumenCounter.textContent = formatNumber(Math.floor(state.lumens)) + ' ' + unit;
     upgradeList.innerHTML = '';
 
     let nextShown = false; // only show one upcoming unpurchased upgrade
@@ -1350,10 +1482,13 @@
         item.classList.add('affordable');
       }
 
+      const displayName = getUpgradeName(up);
+      const displayDesc = getUpgradeDesc(up);
+
       item.innerHTML = `
-        <div class="upgrade-name">${up.name}</div>
-        <div class="upgrade-desc">${up.desc}</div>
-        <div class="upgrade-cost">${isMaxed ? 'MAX' : formatNumber(cost) + ' lm'}</div>
+        <div class="upgrade-name">${displayName}</div>
+        <div class="upgrade-desc">${displayDesc}</div>
+        <div class="upgrade-cost">${isMaxed ? 'MAX' : formatNumber(cost) + ' ' + unit}</div>
         ${count > 0 ? `<div class="upgrade-count">x${count}</div>` : ''}
       `;
 
@@ -1390,6 +1525,10 @@
 
   function showSwitch() {
     switchContainer.classList.remove('hidden');
+    // In Off mode, lever starts in "on" position (top) and will flip down
+    if (gameMode === 'off') {
+      switchLever.classList.add('on');
+    }
   }
 
   lightSwitch.addEventListener('click', function (e) {
@@ -1397,7 +1536,11 @@
     if (!state.sunPurchased || sunCinematicActive) return;
 
     // Flip the switch
-    switchLever.classList.add('on');
+    if (gameMode === 'off') {
+      switchLever.classList.remove('on'); // lever goes down (turning off)
+    } else {
+      switchLever.classList.add('on'); // lever goes up (turning on)
+    }
 
     // Start the sun cinematic after a brief pause
     setTimeout(function () {
@@ -1436,9 +1579,18 @@
     const centerY = cinCanvas.height * 0.35;
     const maxRadius = Math.max(cinCanvas.width, cinCanvas.height) * 1.5;
 
-    // Phase 1: Sun appears and grows (0 -> 0.4)
+    // Phase 1: Sun/Void appears and grows (0 -> 0.4)
     // Phase 2: Rays expand outward (0.3 -> 0.7)
-    // Phase 3: Screen fills with white (0.6 -> 1.0)
+    // Phase 3: Screen fills with white/black (0.6 -> 1.0)
+
+    // Cinematic colors based on mode
+    const isOff = gameMode === 'off';
+    // Off mode: dark void consuming light. On mode: bright sun filling darkness.
+    function cinRgba(r, g, b, a) {
+      if (isOff) return 'rgba(' + (255 - r) + ', ' + (255 - g) + ', ' + (255 - b) + ', ' + a + ')';
+      return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
+    }
+    const fillEnd = isOff ? '#000' : '#fff';
 
     function animateCinematic() {
       sunCinematicProgress += 0.003;
@@ -1446,7 +1598,7 @@
       cinCtx.clearRect(0, 0, cinCanvas.width, cinCanvas.height);
 
       if (sunCinematicProgress < 1.0) {
-        // Phase 1: Growing sun core
+        // Phase 1: Growing core
         if (sunCinematicProgress < 0.5) {
           const phase1 = sunCinematicProgress / 0.5;
           const sunRadius = easeOutCubic(phase1) * 60;
@@ -1455,26 +1607,26 @@
 
           // Outer warm glow
           const outerGlow = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
-          outerGlow.addColorStop(0, 'rgba(255, 240, 200, ' + (alpha * 0.4) + ')');
-          outerGlow.addColorStop(0.3, 'rgba(255, 220, 150, ' + (alpha * 0.2) + ')');
-          outerGlow.addColorStop(1, 'rgba(255, 200, 100, 0)');
+          outerGlow.addColorStop(0, cinRgba(255, 240, 200, alpha * 0.4));
+          outerGlow.addColorStop(0.3, cinRgba(255, 220, 150, alpha * 0.2));
+          outerGlow.addColorStop(1, cinRgba(255, 200, 100, 0));
           cinCtx.beginPath();
           cinCtx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
           cinCtx.fillStyle = outerGlow;
           cinCtx.fill();
 
-          // Sun core
+          // Core
           const coreGlow = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, sunRadius);
-          coreGlow.addColorStop(0, 'rgba(255, 255, 255, ' + alpha + ')');
-          coreGlow.addColorStop(0.6, 'rgba(255, 250, 230, ' + (alpha * 0.8) + ')');
-          coreGlow.addColorStop(1, 'rgba(255, 240, 200, 0)');
+          coreGlow.addColorStop(0, cinRgba(255, 255, 255, alpha));
+          coreGlow.addColorStop(0.6, cinRgba(255, 250, 230, alpha * 0.8));
+          coreGlow.addColorStop(1, cinRgba(255, 240, 200, 0));
           cinCtx.beginPath();
           cinCtx.arc(centerX, centerY, sunRadius, 0, Math.PI * 2);
           cinCtx.fillStyle = coreGlow;
           cinCtx.fill();
         }
 
-        // Phase 2: Rays burst from sun
+        // Phase 2: Rays burst
         if (sunCinematicProgress >= 0.25 && sunCinematicProgress < 0.75) {
           const phase2 = (sunCinematicProgress - 0.25) / 0.5;
           const rayCount = 12;
@@ -1487,8 +1639,8 @@
             const endY = centerY + Math.sin(angle) * rayLength;
 
             const rayGrad = cinCtx.createLinearGradient(centerX, centerY, endX, endY);
-            rayGrad.addColorStop(0, 'rgba(255, 255, 240, ' + (rayAlpha * 0.8) + ')');
-            rayGrad.addColorStop(1, 'rgba(255, 255, 240, 0)');
+            rayGrad.addColorStop(0, cinRgba(255, 255, 240, rayAlpha * 0.8));
+            rayGrad.addColorStop(1, cinRgba(255, 255, 240, 0));
 
             cinCtx.beginPath();
             cinCtx.moveTo(centerX, centerY);
@@ -1498,28 +1650,28 @@
             cinCtx.stroke();
           }
 
-          // Persistent sun core during rays
+          // Persistent core during rays
           const sunR = 60 + phase2 * 30;
           const coreGlow = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, sunR);
-          coreGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
-          coreGlow.addColorStop(0.5, 'rgba(255, 250, 230, 0.9)');
-          coreGlow.addColorStop(1, 'rgba(255, 240, 200, 0)');
+          coreGlow.addColorStop(0, cinRgba(255, 255, 255, 1));
+          coreGlow.addColorStop(0.5, cinRgba(255, 250, 230, 0.9));
+          coreGlow.addColorStop(1, cinRgba(255, 240, 200, 0));
           cinCtx.beginPath();
           cinCtx.arc(centerX, centerY, sunR, 0, Math.PI * 2);
           cinCtx.fillStyle = coreGlow;
           cinCtx.fill();
         }
 
-        // Phase 3: White flood fills the screen
+        // Phase 3: Flood fills the screen
         if (sunCinematicProgress >= 0.55) {
           const phase3 = (sunCinematicProgress - 0.55) / 0.45;
           const floodRadius = easeOutCubic(phase3) * maxRadius;
           const floodAlpha = easeOutCubic(phase3);
 
           const flood = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, floodRadius);
-          flood.addColorStop(0, 'rgba(255, 255, 255, ' + floodAlpha + ')');
-          flood.addColorStop(0.6, 'rgba(255, 255, 255, ' + (floodAlpha * 0.8) + ')');
-          flood.addColorStop(1, 'rgba(255, 255, 255, ' + (floodAlpha * 0.3) + ')');
+          flood.addColorStop(0, cinRgba(255, 255, 255, floodAlpha));
+          flood.addColorStop(0.6, cinRgba(255, 255, 255, floodAlpha * 0.8));
+          flood.addColorStop(1, cinRgba(255, 255, 255, floodAlpha * 0.3));
           cinCtx.beginPath();
           cinCtx.arc(centerX, centerY, floodRadius, 0, Math.PI * 2);
           cinCtx.fillStyle = flood;
@@ -1528,8 +1680,8 @@
 
         requestAnimationFrame(animateCinematic);
       } else {
-        // Cinematic done — fill white then show victory
-        cinCtx.fillStyle = '#fff';
+        // Cinematic done — fill then show victory
+        cinCtx.fillStyle = fillEnd;
         cinCtx.fillRect(0, 0, cinCanvas.width, cinCanvas.height);
 
         setTimeout(function () {
@@ -1553,70 +1705,19 @@
   // --- Restart ---
   restartBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    localStorage.removeItem(SAVE_KEY);
-    state.lumens = 0;
-    state.totalLumens = 0;
-    state.clickPower = 1;
-    state.lumensPerSecond = 0;
-    state.upgrades = {};
-    state.victoryReached = false;
-    state.sunPurchased = false;
-    sunCinematicActive = false;
-    upgradeUnlocked = false;
-    upgradeToggle.classList.add('hidden');
-    upgradePanel.classList.remove('open');
-    victoryScreen.classList.add('hidden');
-    switchContainer.classList.add('hidden');
-    switchLever.classList.remove('on');
-    halos.length = 0;
-    lightBursts.length = 0;
-    prismRays.length = 0;
-    lightningBolts.length = 0;
-    bgStars.length = 0;
-    lastStarCount = 0;
-    activeConstellations.length = 0;
-    bigBangActive = false;
-    bigBangPhase = 0;
-    bigBangParticles = [];
-    prismHolding = false;
-    comboCount = 0;
-    updateUI();
-    renderUpgrades();
+    localStorage.removeItem(getSaveKey());
+    localStorage.removeItem('light-game-mode');
+    // Reload to return to mode selection
+    window.location.reload();
   });
 
   // --- Reset button ---
   const resetBtn = document.getElementById('reset-btn');
   resetBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    localStorage.removeItem(SAVE_KEY);
-    state.lumens = 0;
-    state.totalLumens = 0;
-    state.clickPower = 1;
-    state.lumensPerSecond = 0;
-    state.upgrades = {};
-    state.victoryReached = false;
-    state.sunPurchased = false;
-    sunCinematicActive = false;
-    upgradeUnlocked = false;
-    upgradeToggle.classList.add('hidden');
-    upgradePanel.classList.remove('open');
-    victoryScreen.classList.add('hidden');
-    switchContainer.classList.add('hidden');
-    switchLever.classList.remove('on');
-    halos.length = 0;
-    lightBursts.length = 0;
-    prismRays.length = 0;
-    lightningBolts.length = 0;
-    bgStars.length = 0;
-    lastStarCount = 0;
-    activeConstellations.length = 0;
-    bigBangActive = false;
-    bigBangPhase = 0;
-    bigBangParticles = [];
-    prismHolding = false;
-    comboCount = 0;
-    updateUI();
-    renderUpgrades();
+    localStorage.removeItem(getSaveKey());
+    localStorage.removeItem('light-game-mode');
+    window.location.reload();
   });
 
   // --- DEV button: Ready for Sun ---
@@ -1809,14 +1910,11 @@
       const r = b.radius * pulseScale * twinkleScale;
 
       // Warm firefly glow (slight yellow-green tint)
-      const outerR = 255, outerG = 255, outerB = 220;
-      const coreR = 255, coreG = 255, coreB = 240;
-
       // Outer glow — warm halo
       const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 2.5);
-      gradient.addColorStop(0, `rgba(${outerR}, ${outerG}, ${outerB}, ${alpha * 0.4})`);
-      gradient.addColorStop(0.4, `rgba(${outerR}, ${outerG}, ${outerB}, ${alpha * 0.12})`);
-      gradient.addColorStop(1, `rgba(${outerR}, ${outerG}, ${outerB}, 0)`);
+      gradient.addColorStop(0, rgba(255, 255, 220, alpha * 0.4));
+      gradient.addColorStop(0.4, rgba(255, 255, 220, alpha * 0.12));
+      gradient.addColorStop(1, rgba(255, 255, 220, 0));
       ctx.beginPath();
       ctx.arc(b.x, b.y, r * 2.5, 0, Math.PI * 2);
       ctx.fillStyle = gradient;
@@ -1824,8 +1922,8 @@
 
       // Core — bright center
       const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 0.7);
-      core.addColorStop(0, `rgba(${coreR}, ${coreG}, ${coreB}, ${alpha * 0.9})`);
-      core.addColorStop(1, `rgba(${coreR}, ${coreG}, ${coreB}, ${alpha * 0.15})`);
+      core.addColorStop(0, rgba(255, 255, 240, alpha * 0.9));
+      core.addColorStop(1, rgba(255, 255, 240, alpha * 0.15));
       ctx.beginPath();
       ctx.arc(b.x, b.y, r * 0.7, 0, Math.PI * 2);
       ctx.fillStyle = core;
@@ -2097,10 +2195,10 @@
 
       // Create gradient along the ray
       const grad = ctx.createLinearGradient(ray.startX, ray.startY, ray.endX, ray.endY);
-      grad.addColorStop(0, `rgba(255, 255, 255, 0)`);
-      grad.addColorStop(0.15, `rgba(255, 255, 255, ${alpha})`);
-      grad.addColorStop(0.85, `rgba(255, 255, 255, ${alpha})`);
-      grad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+      grad.addColorStop(0, rgba(255, 255, 255, 0));
+      grad.addColorStop(0.15, rgba(255, 255, 255, alpha));
+      grad.addColorStop(0.85, rgba(255, 255, 255, alpha));
+      grad.addColorStop(1, rgba(255, 255, 255, 0));
       ctx.strokeStyle = grad;
       ctx.lineWidth = baseWidth;
       ctx.stroke();
@@ -2109,7 +2207,7 @@
       ctx.beginPath();
       ctx.moveTo(ray.startX, ray.startY);
       ctx.lineTo(ray.endX, ray.endY);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.15})`;
+      ctx.strokeStyle = rgba(255, 255, 255, alpha * 0.15);
       ctx.lineWidth = baseWidth * 6;
       ctx.stroke();
 
@@ -2129,9 +2227,9 @@
           result.cx, result.cy, 0,
           result.cx, result.cy, glowSize
         );
-        prismGlow.addColorStop(0, `rgba(255, 255, 255, ${alpha * Math.min(0.9 + totalIntensity * 0.1, 1.0)})`);
-        prismGlow.addColorStop(0.3, `rgba(255, 255, 255, ${alpha * Math.min(0.3 + totalIntensity * 0.15, 0.8)})`);
-        prismGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        prismGlow.addColorStop(0, rgba(255, 255, 255, alpha * Math.min(0.9 + totalIntensity * 0.1, 1.0)));
+        prismGlow.addColorStop(0.3, rgba(255, 255, 255, alpha * Math.min(0.3 + totalIntensity * 0.15, 0.8)));
+        prismGlow.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.beginPath();
         ctx.arc(result.cx, result.cy, glowSize, 0, Math.PI * 2);
         ctx.fillStyle = prismGlow;
@@ -2201,7 +2299,7 @@
         ctx.beginPath();
         ctx.moveTo(ray.startX, ray.startY);
         ctx.lineTo(ray.endX, ray.endY);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - fadeAlpha) * 0.3})`;
+        ctx.strokeStyle = rgba(255, 255, 255, (1 - fadeAlpha) * 0.3);
         ctx.lineWidth = baseWidth * 0.5;
         ctx.setLineDash([4, 8]);
         ctx.stroke();
@@ -2318,7 +2416,7 @@
       ctx.lineTo(points[i].x, points[i].y);
     }
     // Bright core
-    ctx.strokeStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+    ctx.strokeStyle = rgba(255, 255, 255, alpha);
     ctx.lineWidth = width;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -2330,7 +2428,7 @@
     for (let i = 1; i < points.length; i++) {
       ctx.lineTo(points[i].x, points[i].y);
     }
-    ctx.strokeStyle = 'rgba(200, 220, 255, ' + (alpha * 0.4) + ')';
+    ctx.strokeStyle = rgba(200, 220, 255, alpha * 0.4);
     ctx.lineWidth = width * 4;
     ctx.stroke();
 
@@ -2340,7 +2438,7 @@
     for (let i = 1; i < points.length; i++) {
       ctx.lineTo(points[i].x, points[i].y);
     }
-    ctx.strokeStyle = 'rgba(180, 200, 255, ' + (alpha * 0.12) + ')';
+    ctx.strokeStyle = rgba(180, 200, 255, alpha * 0.12);
     ctx.lineWidth = width * 10;
     ctx.stroke();
   }
@@ -2415,7 +2513,7 @@
       sunPurchased: state.sunPurchased,
     };
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      localStorage.setItem(getSaveKey(), JSON.stringify(data));
     } catch (_) {
       // silently fail if storage unavailable
     }
@@ -2423,7 +2521,7 @@
 
   function load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(getSaveKey());
       if (!raw) return;
       const data = JSON.parse(raw);
       state.lumens = data.lumens || 0;
@@ -2477,7 +2575,12 @@
     checkRaySpawn();
 
     // Clear canvas then draw (back to front)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (gameMode === 'off') {
+      // In off mode, canvas must be transparent (white body shows through)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
     drawStars();
     drawConstellations();
     drawHalos();
@@ -2489,16 +2592,18 @@
     requestAnimationFrame(gameLoop);
   }
 
-  // --- Init ---
-  load();
-  updateUI();
-  gameLoop();
-  setInterval(passiveTick, 100);
-  setInterval(save, 5000); // auto-save every 5s
-  setInterval(function () {
-    if (upgradePanel.classList.contains('open')) {
-      renderUpgrades();
-    }
-  }, 500);
+  // --- Init (called after mode selection) ---
+  function initGame() {
+    load();
+    updateUI();
+    gameLoop();
+    setInterval(passiveTick, 100);
+    setInterval(save, 5000); // auto-save every 5s
+    setInterval(function () {
+      if (upgradePanel.classList.contains('open')) {
+        renderUpgrades();
+      }
+    }, 500);
+  }
 
 })();
