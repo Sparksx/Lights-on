@@ -485,11 +485,25 @@
       return;
     }
 
-    // Close panel so the player sees the reward animation
-    upgradePanel.classList.remove('open');
-    addEdgeGlow();
+    pendingReward = true;
     recalcPassive();
+    renderUpgrades();
     updateUI();
+
+    // Auto-close if no more affordable upgrades
+    if (!hasAffordableUpgrade()) {
+      closeUpgradePanel();
+    }
+  }
+
+  function hasAffordableUpgrade() {
+    for (const up of UPGRADES) {
+      const count = getUpgradeCount(up.id);
+      if (count >= up.maxCount) continue;
+      if (state.totalLumens < up.unlockAt) continue;
+      if (state.lumens >= getUpgradeCost(up)) return true;
+    }
+    return false;
   }
 
   function recalcPassive() {
@@ -618,15 +632,29 @@
   });
 
   // --- Upgrade panel toggle ---
+  let pendingReward = false;
+
+  function closeUpgradePanel() {
+    upgradePanel.classList.remove('open');
+    if (pendingReward) {
+      pendingReward = false;
+      addEdgeGlow();
+    }
+  }
+
   upgradeToggle.addEventListener('click', function (e) {
     e.stopPropagation();
-    upgradePanel.classList.toggle('open');
-    renderUpgrades();
+    if (upgradePanel.classList.contains('open')) {
+      closeUpgradePanel();
+    } else {
+      upgradePanel.classList.add('open');
+      renderUpgrades();
+    }
   });
 
   upgradeClose.addEventListener('click', function (e) {
     e.stopPropagation();
-    upgradePanel.classList.remove('open');
+    closeUpgradePanel();
   });
 
   // --- Light burst events (collectible orbs) ---
