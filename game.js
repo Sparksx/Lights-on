@@ -373,31 +373,32 @@
 
   // --- Shadow-themed names/descriptions for Off mode ---
   // Maps upgrade id → { name, desc } for the "Lights Off" universe
+  // Unique progression: entropy, silence, void — NOT dark mirrors of light concepts
   const SHADOW_THEME = {
-    spark:         { name: 'Ombre',           desc: 'Frotte, et l\'obscurité naît' },
-    firefly:       { name: 'Phalène',         desc: 'Danse autour de la dernière flamme' },
-    candle:        { name: 'Fumée',           desc: 'La flamme meurt, la fumée reste' },
-    prism:         { name: 'Obsidienne',      desc: 'Un rayon entre, aucun n\'en sort' },
-    lantern:       { name: 'Lanterne sourde', desc: 'La flamme emprisonnée s\'éteint' },
-    lightning:     { name: 'Foudre noire',    desc: 'Frappe et obscurcit' },
-    lighthouse:    { name: 'Phare éteint',    desc: 'Ne guide plus personne' },
-    aurora:        { name: 'Crépuscule',      desc: 'Le ciel perd ses couleurs' },
-    star:          { name: 'Étoile morte',    desc: 'Quatre milliards d\'années de silence' },
-    supernova:     { name: 'Trou noir',       desc: 'L\'étoile s\'effondre dans le vide' },
-    pulsar:        { name: 'Vortex',          desc: 'Un tourbillon dans le néant' },
-    nebula:        { name: 'Brume noire',     desc: 'Le linceul des soleils éteints' },
-    comet:         { name: 'Météore sombre',  desc: 'Une traînée de cendres et de nuit' },
-    quasar:        { name: 'Abîme',           desc: 'Plus profond qu\'un milliard de nuits' },
-    plasma:        { name: 'Antimatière',     desc: 'Le quatrième état du vide' },
-    constellation: { name: 'Oubli',           desc: 'Des histoires effacées du ciel' },
-    galaxy:        { name: 'Galaxie noire',   desc: 'Cent milliards d\'étoiles s\'éteignent' },
-    whitehole:     { name: 'Trou noir',       desc: 'Ce qui entre n\'est jamais rendu' },
-    darkmatter:    { name: 'Énergie sombre',  desc: 'Invisible, elle dévore l\'univers' },
-    bigbang:       { name: 'Big Crunch',      desc: 'Que l\'obscurité soit' },
-    cosmiclight:   { name: 'Nuit cosmique',   desc: 'L\'écho du dernier instant' },
-    multiverse:    { name: 'Néant',           desc: 'Chaque choix, un soleil de moins' },
-    eternity:      { name: 'Oubli éternel',   desc: 'Le temps n\'est plus qu\'une ombre' },
-    sun:           { name: 'Éclipse',         desc: '?' },
+    spark:         { name: 'Murmure',           desc: 'Le premier son qui s\'éteint' },
+    firefly:       { name: 'Éphémère',          desc: 'N\'existe que pour disparaître' },
+    candle:        { name: 'Suie',              desc: 'Ce qui reste quand la flamme meurt' },
+    prism:         { name: 'Onyx',              desc: 'La pierre qui avale la lumière' },
+    lantern:       { name: 'Braise',            desc: 'Le dernier soupir du feu' },
+    lightning:     { name: 'Fissure',           desc: 'La réalité se fend' },
+    lighthouse:    { name: 'Sirène',            desc: 'Attire vers les profondeurs' },
+    aurora:        { name: 'Crépuscule',        desc: 'Le ciel se referme' },
+    star:          { name: 'Cendre',            desc: 'Poussière de ce qui fut' },
+    supernova:     { name: 'Singularité',       desc: 'Le point de non-retour' },
+    pulsar:        { name: 'Vortex',            desc: 'Un tourbillon sans fond' },
+    nebula:        { name: 'Miasme',            desc: 'Un brouillard qui dévore' },
+    comet:         { name: 'Spectre',           desc: 'L\'écho d\'une lumière morte' },
+    quasar:        { name: 'Abîme',             desc: 'Regarde trop longtemps, il te regarde' },
+    plasma:        { name: 'Entropie',          desc: 'Le désordre absolu' },
+    constellation: { name: 'Oubli',             desc: 'Les souvenirs se dissolvent' },
+    galaxy:        { name: 'Maelström',         desc: 'Le tourbillon final' },
+    whitehole:     { name: 'Horizon',           desc: 'Au-delà, rien ne revient' },
+    darkmatter:    { name: 'Néant',             desc: 'L\'absence même d\'absence' },
+    bigbang:       { name: 'Big Crunch',        desc: 'L\'univers se replie sur lui-même' },
+    cosmiclight:   { name: 'Silence cosmique',  desc: 'Le dernier écho s\'éteint' },
+    multiverse:    { name: 'Dissolution',       desc: 'La matière retourne au vide' },
+    eternity:      { name: 'Extinction',        desc: 'Le temps cesse de couler' },
+    sun:           { name: 'Éclipse',           desc: '?' },
   };
 
   // Helper to get display name/desc based on current mode
@@ -791,6 +792,8 @@
   let nextBigBangTime = Date.now() + 30000 + Math.random() * 30000;
 
   function checkBigBangSpawn() {
+    // In off mode, use black hole effect instead
+    if (gameMode === 'off') return;
     const bbCount = getUpgradeCount('bigbang');
     if (bbCount === 0) return;
     if (bigBangActive) return;
@@ -982,6 +985,331 @@
         ctx.lineWidth = 3;
         ctx.stroke();
       }
+    }
+  }
+
+  // --- Black Hole effect system (Off mode replacement for Big Bang) ---
+  // A black hole appears at center and sucks in all white/bright pixels
+  let blackHoleActive = false;
+  let blackHoleProgress = 0; // 0-1 overall progress
+  let blackHolePhase = 0; // 0=idle, 1=forming, 2=absorbing, 3=collapsing
+  let blackHoleParticles = [];
+  let blackHoleRadius = 0;
+  let blackHoleRotation = 0;
+  let nextBlackHoleTime = Date.now() + 30000 + Math.random() * 30000;
+
+  function checkBlackHoleSpawn() {
+    if (gameMode !== 'off') return;
+    const bbCount = getUpgradeCount('bigbang');
+    if (bbCount === 0) return;
+    if (blackHoleActive) return;
+    if (state.victoryReached || state.sunPurchased) return;
+    if (Date.now() < nextBlackHoleTime) return;
+
+    startBlackHole();
+    const interval = Math.max(15000, 40000 - bbCount * 3000);
+    nextBlackHoleTime = Date.now() + interval + Math.random() * interval * 0.5;
+  }
+
+  function startBlackHole() {
+    blackHoleActive = true;
+    blackHolePhase = 1; // forming
+    blackHoleProgress = 0;
+    blackHoleParticles = [];
+    blackHoleRadius = 0;
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    // Scan the canvas for bright pixels and create particles from them
+    // Sample bright elements from existing visual systems
+    let hasContent = false;
+
+    // Collect from halos (glows/persists)
+    for (const h of halos) {
+      if ((h.type === 'glow' || h.type === 'persist') && h.life > 0.1) {
+        hasContent = true;
+        const dx = h.x - cx;
+        const dy = h.y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        blackHoleParticles.push({
+          x: h.x, y: h.y,
+          originX: h.x, originY: h.y,
+          angle: angle,
+          dist: dist,
+          size: 2 + Math.random() * 4,
+          alpha: 0.6 + Math.random() * 0.4,
+          spiralSpeed: 0.02 + Math.random() * 0.03,
+          absorbed: false,
+          stretch: 1,
+          stretchAngle: angle,
+        });
+      }
+    }
+
+    // Collect from light bursts
+    for (const b of lightBursts) {
+      hasContent = true;
+      const dx = b.x - cx;
+      const dy = b.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+      blackHoleParticles.push({
+        x: b.x, y: b.y,
+        originX: b.x, originY: b.y,
+        angle: angle,
+        dist: dist,
+        size: 3 + Math.random() * 5,
+        alpha: 0.7 + Math.random() * 0.3,
+        spiralSpeed: 0.015 + Math.random() * 0.025,
+        absorbed: false,
+        stretch: 1,
+        stretchAngle: angle,
+      });
+    }
+
+    // Collect from background stars
+    for (const s of bgStars) {
+      const dx = s.x - cx;
+      const dy = s.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+      blackHoleParticles.push({
+        x: s.x, y: s.y,
+        originX: s.x, originY: s.y,
+        angle: angle,
+        dist: dist,
+        size: s.size + 0.5,
+        alpha: 0.3 + Math.random() * 0.4,
+        spiralSpeed: 0.01 + Math.random() * 0.02,
+        absorbed: false,
+        stretch: 1,
+        stretchAngle: angle,
+      });
+    }
+
+    // If not much content, generate edge particles
+    if (!hasContent || blackHoleParticles.length < 30) {
+      const count = 60;
+      for (let i = 0; i < count; i++) {
+        // Scatter across entire screen
+        const px = Math.random() * canvas.width;
+        const py = Math.random() * canvas.height;
+        const dx = px - cx;
+        const dy = py - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        blackHoleParticles.push({
+          x: px, y: py,
+          originX: px, originY: py,
+          angle: angle,
+          dist: dist,
+          size: 1 + Math.random() * 3,
+          alpha: 0.2 + Math.random() * 0.5,
+          spiralSpeed: 0.01 + Math.random() * 0.03,
+          absorbed: false,
+          stretch: 1,
+          stretchAngle: angle,
+        });
+      }
+    }
+  }
+
+  function updateBlackHole() {
+    if (!blackHoleActive) return;
+
+    blackHoleProgress += 0.006;
+    blackHoleRotation += 0.08;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const maxR = Math.min(canvas.width, canvas.height) * 0.08;
+
+    if (blackHolePhase === 1) {
+      // Phase 1: Black hole forms (0 -> 0.15)
+      blackHoleRadius = easeOutCubic(blackHoleProgress / 0.15) * maxR;
+
+      if (blackHoleProgress >= 0.15) {
+        blackHolePhase = 2; // start absorbing
+      }
+    } else if (blackHolePhase === 2) {
+      // Phase 2: Absorbing (0.15 -> 0.75) — particles spiral inward
+      blackHoleRadius = maxR;
+      const absorbProgress = (blackHoleProgress - 0.15) / 0.6;
+      let allAbsorbed = true;
+
+      for (const p of blackHoleParticles) {
+        if (p.absorbed) continue;
+
+        // Spiral inward: decrease distance, rotate angle
+        p.angle += p.spiralSpeed * (1 + (1 - p.dist / (Math.max(canvas.width, canvas.height) * 0.8)) * 3);
+        p.dist *= (0.985 - absorbProgress * 0.01); // accelerate pull as time passes
+
+        // Spaghettification: stretch particles as they approach
+        const proximityFactor = Math.max(0, 1 - p.dist / 200);
+        p.stretch = 1 + proximityFactor * 4;
+        p.stretchAngle = p.angle + Math.PI; // stretch toward center
+
+        // Update position
+        p.x = cx + Math.cos(p.angle) * p.dist;
+        p.y = cy + Math.sin(p.angle) * p.dist;
+
+        // Absorbed when very close to center
+        if (p.dist < maxR * 0.5) {
+          p.absorbed = true;
+          p.alpha = 0;
+        } else {
+          // Fade slightly as they approach
+          p.alpha = Math.min(p.alpha, (p.dist / (maxR * 2)) * 0.8);
+          allAbsorbed = false;
+        }
+      }
+
+      if (allAbsorbed || blackHoleProgress >= 0.75) {
+        blackHolePhase = 3; // collapse
+      }
+    } else if (blackHolePhase === 3) {
+      // Phase 3: Black hole collapses (0.75 -> 1.0)
+      const collapseProgress = Math.min((blackHoleProgress - 0.75) / 0.25, 1);
+      blackHoleRadius = maxR * (1 - easeOutCubic(collapseProgress));
+
+      // Absorb any remaining particles
+      for (const p of blackHoleParticles) {
+        if (!p.absorbed) {
+          p.dist *= 0.9;
+          p.angle += p.spiralSpeed * 5;
+          p.x = cx + Math.cos(p.angle) * p.dist;
+          p.y = cy + Math.sin(p.angle) * p.dist;
+          p.alpha *= 0.9;
+          if (p.dist < 5) p.absorbed = true;
+        }
+      }
+
+      if (blackHoleProgress >= 1.0) {
+        blackHoleActive = false;
+        blackHolePhase = 0;
+        blackHoleParticles = [];
+        blackHoleRadius = 0;
+      }
+    }
+  }
+
+  function drawBlackHole() {
+    if (!blackHoleActive) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    // Draw the accretion disk (swirling ring around black hole)
+    if (blackHoleRadius > 2) {
+      const diskRadius = blackHoleRadius * 2.5;
+      const diskAlpha = blackHolePhase === 3
+        ? Math.max(0, 1 - (blackHoleProgress - 0.75) / 0.25) * 0.15
+        : 0.15;
+
+      // Rotating accretion arms
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(blackHoleRotation);
+      for (let i = 0; i < 4; i++) {
+        const armAngle = (i / 4) * Math.PI * 2;
+        // Each arm is a curved trail
+        ctx.beginPath();
+        for (let t = 0; t < 1; t += 0.02) {
+          const spiralR = blackHoleRadius * 0.8 + t * (diskRadius - blackHoleRadius * 0.8);
+          const spiralA = armAngle + t * Math.PI * 1.5; // 1.5 turns
+          const sx = Math.cos(spiralA) * spiralR;
+          const sy = Math.sin(spiralA) * spiralR;
+          if (t === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        // In off mode, the accretion disk glows dark (inverted colors via rgba)
+        ctx.strokeStyle = rgba(255, 255, 255, diskAlpha * (1 - 0.15 * i));
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Gravitational lensing ring (bright edge around the event horizon)
+      const lensGrad = ctx.createRadialGradient(cx, cy, blackHoleRadius * 0.7, cx, cy, blackHoleRadius * 1.3);
+      lensGrad.addColorStop(0, rgba(255, 255, 255, 0));
+      lensGrad.addColorStop(0.4, rgba(255, 255, 255, diskAlpha * 0.6));
+      lensGrad.addColorStop(0.6, rgba(255, 255, 255, diskAlpha * 0.8));
+      lensGrad.addColorStop(1, rgba(255, 255, 255, 0));
+      ctx.beginPath();
+      ctx.arc(cx, cy, blackHoleRadius * 1.3, 0, Math.PI * 2);
+      ctx.fillStyle = lensGrad;
+      ctx.fill();
+
+      // The event horizon itself (solid dark circle)
+      // In off mode: rgb inverts so white→black, this creates a dark void
+      const holeGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, blackHoleRadius);
+      holeGrad.addColorStop(0, rgba(0, 0, 0, 1));
+      holeGrad.addColorStop(0.8, rgba(0, 0, 0, 0.95));
+      holeGrad.addColorStop(1, rgba(0, 0, 0, 0.3));
+      ctx.beginPath();
+      ctx.arc(cx, cy, blackHoleRadius, 0, Math.PI * 2);
+      ctx.fillStyle = holeGrad;
+      ctx.fill();
+    }
+
+    // Draw particles being absorbed (with spaghettification)
+    for (const p of blackHoleParticles) {
+      if (p.absorbed || p.alpha <= 0) continue;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.stretchAngle);
+      ctx.scale(p.stretch, 1 / Math.max(p.stretch * 0.5, 0.3)); // stretch toward center, compress perpendicular
+
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(p.size, 0.5), 0, Math.PI * 2);
+      ctx.fillStyle = rgba(255, 255, 255, Math.max(p.alpha, 0));
+      ctx.fill();
+
+      // Small glow around each particle
+      if (p.size > 1.5) {
+        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size * 2);
+        glow.addColorStop(0, rgba(255, 255, 255, p.alpha * 0.3));
+        glow.addColorStop(1, rgba(255, 255, 255, 0));
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
+        ctx.fillStyle = glow;
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // Distortion effect: dark tendrils reaching outward during absorption
+    if (blackHolePhase === 2) {
+      const absorbProgress = (blackHoleProgress - 0.15) / 0.6;
+      const tendrilCount = 6;
+      const tendrilReach = blackHoleRadius * 3 * (1 - absorbProgress * 0.5);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(blackHoleRotation * 0.3);
+      for (let i = 0; i < tendrilCount; i++) {
+        const tAngle = (i / tendrilCount) * Math.PI * 2;
+        const wobble = Math.sin(blackHoleRotation + i * 2.1) * 0.3;
+        const endX = Math.cos(tAngle + wobble) * tendrilReach;
+        const endY = Math.sin(tAngle + wobble) * tendrilReach;
+
+        const tendrilGrad = ctx.createLinearGradient(0, 0, endX, endY);
+        tendrilGrad.addColorStop(0, rgba(0, 0, 0, 0.3 * (1 - absorbProgress)));
+        tendrilGrad.addColorStop(1, rgba(0, 0, 0, 0));
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        // Curved tendril using quadratic bezier
+        const cpX = endX * 0.5 + Math.cos(tAngle + Math.PI / 2) * tendrilReach * 0.3;
+        const cpY = endY * 0.5 + Math.sin(tAngle + Math.PI / 2) * tendrilReach * 0.3;
+        ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        ctx.strokeStyle = tendrilGrad;
+        ctx.lineWidth = 3 + absorbProgress * 2;
+        ctx.stroke();
+      }
+      ctx.restore();
     }
   }
 
@@ -1565,6 +1893,10 @@
     bigBangActive = false;
     bigBangPhase = 0;
     bigBangParticles = [];
+    blackHoleActive = false;
+    blackHolePhase = 0;
+    blackHoleParticles = [];
+    blackHoleRadius = 0;
 
     // Create cinematic canvas
     const cinCanvas = document.createElement('canvas');
@@ -2567,6 +2899,8 @@
     checkConstellationSpawn();
     updateBigBang();
     checkBigBangSpawn();
+    updateBlackHole();
+    checkBlackHoleSpawn();
     updateHalos();
     updateLightBursts();
     updatePrismRays();
@@ -2585,6 +2919,7 @@
     drawConstellations();
     drawHalos();
     drawBigBang();
+    drawBlackHole();
     drawLightningBolts();
     drawPrismRays();
     drawLightBursts();
