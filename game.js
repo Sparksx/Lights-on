@@ -329,6 +329,7 @@
 
   function moveRub(x, y) {
     if (!isRubbing || state.victoryReached) return;
+    if (getUpgradeCount('spark') === 0) return;
     const dx = x - lastRubX;
     const dy = y - lastRubY;
     const dist = Math.sqrt(dx * dx + dy * dy);
