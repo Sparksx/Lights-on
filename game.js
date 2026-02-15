@@ -15,7 +15,6 @@
 
   // --- Constants ---
   const VICTORY_LUMENS = 200000;
-  const MAX_BRIGHTNESS = 0.95; // background brightness before victory
   const SAVE_KEY = 'lights-on-save';
 
   // --- Upgrades Definition ---
@@ -114,8 +113,6 @@
   const gameArea = document.getElementById('game-area');
   const canvas = document.getElementById('halo-canvas');
   const ctx = canvas.getContext('2d');
-  const lumenCounter = document.getElementById('lumen-counter');
-  const lpsCounter = document.getElementById('lps-counter');
   const progressFill = document.getElementById('progress-fill');
   const upgradeToggle = document.getElementById('upgrade-toggle');
   const upgradePanel = document.getElementById('upgrade-panel');
@@ -135,26 +132,51 @@
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
-  // --- Halo system ---
+  // --- Halo system (water-drop ripple) ---
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
   function addHalo(x, y) {
-    const brightness = Math.min(0.15 + state.totalLumens / VICTORY_LUMENS * 0.4, 0.55);
-    const radius = 30 + Math.min(state.totalLumens / VICTORY_LUMENS * 80, 80);
+    const progress = Math.min(state.totalLumens / VICTORY_LUMENS, 1);
+    const intensity = 0.4 + progress * 0.6;
+    const scale = 1 + progress * 2;
+
+    // Central flash
     halos.push({
-      x,
-      y,
-      radius,
-      opacity: brightness,
-      maxRadius: radius * 2.5,
+      type: 'glow',
+      x, y,
+      maxRadius: 25 * scale,
+      opacity: intensity,
       life: 1.0,
-      decay: 0.02 + Math.random() * 0.01,
+      decay: 0.035,
+      delay: 0,
     });
+
+    // Expanding ripple rings
+    for (let i = 0; i < 3; i++) {
+      halos.push({
+        type: 'ring',
+        x, y,
+        maxRadius: (80 + i * 40) * scale,
+        opacity: intensity * (1 - i * 0.2),
+        life: 1.0,
+        decay: 0.012 + i * 0.002,
+        delay: i * 6,
+      });
+    }
   }
 
   function updateHalos() {
     for (let i = halos.length - 1; i >= 0; i--) {
       const h = halos[i];
+
+      if (h.delay > 0) {
+        h.delay--;
+        continue;
+      }
+
       h.life -= h.decay;
-      h.radius += 1.5;
       if (h.life <= 0) {
         halos.splice(i, 1);
       }
@@ -163,28 +185,35 @@
 
   function drawHalos() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const h of halos) {
-      const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.radius);
-      const alpha = h.opacity * h.life;
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-      gradient.addColorStop(0.4, `rgba(255, 255, 255, ${alpha * 0.4})`);
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-    }
-  }
 
-  // --- Click text feedback ---
-  function showClickText(x, y, amount) {
-    const el = document.createElement('div');
-    el.className = 'click-text';
-    el.textContent = '+' + formatNumber(amount);
-    el.style.left = x + 'px';
-    el.style.top = (y - 20) + 'px';
-    gameArea.appendChild(el);
-    setTimeout(() => el.remove(), 800);
+    for (const h of halos) {
+      if (h.delay > 0) continue;
+
+      const alpha = h.opacity * Math.max(h.life, 0);
+      if (alpha <= 0) continue;
+
+      const t = 1 - h.life;
+      const radius = h.maxRadius * easeOutCubic(t);
+
+      if (h.type === 'glow') {
+        const r = Math.max(radius, 1);
+        const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      } else if (h.type === 'ring') {
+        if (radius < 1) continue;
+        const lineWidth = Math.max(0.5, 1.5 * h.life);
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      }
+    }
   }
 
   // --- Click handler ---
@@ -203,7 +232,6 @@
     state.totalLumens += state.clickPower;
 
     addHalo(x, y);
-    showClickText(x, y, state.clickPower);
     checkMilestones();
     updateUI();
   }
@@ -308,32 +336,8 @@
 
   // --- UI update ---
   function updateUI() {
-    lumenCounter.textContent = formatNumber(Math.floor(state.lumens)) + ' lumens';
-    lpsCounter.textContent = formatNumber(state.lumensPerSecond) + ' lumens/sec';
-
-    // Background brightness
     const progress = Math.min(state.totalLumens / VICTORY_LUMENS, 1);
-    const brightness = Math.floor(progress * MAX_BRIGHTNESS * 255);
-    gameArea.style.backgroundColor = `rgb(${brightness}, ${brightness}, ${brightness})`;
-
-    // Progress bar
     progressFill.style.width = (progress * 100) + '%';
-
-    // HUD visibility scales with brightness
-    const hudOpacity = 0.4 + progress * 0.6;
-    document.getElementById('hud').style.opacity = hudOpacity;
-
-    // Text glow increases
-    const glowStrength = Math.floor(5 + progress * 20);
-    lumenCounter.style.textShadow = `0 0 ${glowStrength}px rgba(255,255,255,${0.3 + progress * 0.5})`;
-
-    // If dark, text color adjusts
-    if (progress > 0.5) {
-      const textColor = Math.floor(255 - progress * 255);
-      const tc = `rgb(${textColor}, ${textColor}, ${textColor})`;
-      lumenCounter.style.color = tc;
-      lpsCounter.style.color = tc;
-    }
   }
 
   // --- Victory ---
