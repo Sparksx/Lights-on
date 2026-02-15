@@ -500,22 +500,28 @@
       showComboGlow(x, y, multiplier);
     }
 
-    // Lightning bonus: gentle screen flash (epilepsy-safe)
+    // Lightning: stormy bolt animation + flash
     const lightningCount = getUpgradeCount('lightning');
     if (lightningCount > 0) {
-      // Only add flash if no active flash exists (prevent rapid stacking)
       const hasFlash = halos.some(function (h) { return h.type === 'screen-flash' && h.life > 0.5; });
       if (!hasFlash) {
-        const flashIntensity = Math.min(0.03 + lightningCount * 0.005, 0.08);
+        // Screen flash (epilepsy-safe intensity)
+        const flashIntensity = Math.min(0.04 + lightningCount * 0.008, 0.12);
         halos.push({
           type: 'screen-flash',
           x: 0, y: 0,
           maxRadius: 0,
           opacity: flashIntensity,
           life: 1.0,
-          decay: 0.04, // fades over ~25 frames (~0.4s) — smooth, epilepsy-safe
+          decay: 0.04,
           delay: 0,
         });
+
+        // Generate lightning bolt(s) from click point
+        const boltCount = Math.min(1 + Math.floor(lightningCount / 4), 3);
+        for (let bolt = 0; bolt < boltCount; bolt++) {
+          spawnLightningBolt(x, y, lightningCount, bolt * 3);
+        }
       }
     }
     checkMilestones();
@@ -690,6 +696,7 @@
     halos.length = 0;
     lightBursts.length = 0;
     prismRays.length = 0;
+    lightningBolts.length = 0;
 
     // Create cinematic canvas
     const cinCanvas = document.createElement('canvas');
@@ -839,6 +846,7 @@
     halos.length = 0;
     lightBursts.length = 0;
     prismRays.length = 0;
+    lightningBolts.length = 0;
     prismHolding = false;
     comboCount = 0;
     updateUI();
@@ -867,6 +875,7 @@
     halos.length = 0;
     lightBursts.length = 0;
     prismRays.length = 0;
+    lightningBolts.length = 0;
     prismHolding = false;
     comboCount = 0;
     updateUI();
@@ -1059,28 +1068,62 @@
         state.lumens += b.bonus;
         state.totalLumens += b.bonus;
 
-        // Burst effect
+        // Light explosion proportional to lumens bonus
+        const explosionScale = Math.min(b.bonus / 100, 5) + 1; // 1-6x scale
+        const explosionIntensity = Math.min(0.6 + explosionScale * 0.15, 1.0);
+
+        // Bright central flash
         halos.push({
           type: 'glow',
           x: b.x, y: b.y,
-          maxRadius: 80,
-          opacity: 0.8,
-          life: 1.0,
-          decay: 0.02,
-          delay: 0,
-        });
-
-        // Show bonus text
-        halos.push({
-          type: 'combo-text',
-          x: b.x, y: b.y - 20,
-          text: '+' + formatNumber(b.bonus) + ' !',
-          opacity: 1.0,
+          maxRadius: 60 * explosionScale,
+          opacity: explosionIntensity,
           life: 1.0,
           decay: 0.015,
           delay: 0,
-          maxRadius: 0,
         });
+
+        // Secondary warm glow (lingering)
+        halos.push({
+          type: 'persist',
+          x: b.x, y: b.y,
+          maxRadius: 80 * explosionScale,
+          opacity: explosionIntensity * 0.5,
+          life: 1.0,
+          decay: 0.006,
+          delay: 0,
+        });
+
+        // Expanding light rings proportional to bonus
+        const ringCount = Math.min(2 + Math.floor(explosionScale), 6);
+        for (let r = 0; r < ringCount; r++) {
+          halos.push({
+            type: 'ring',
+            x: b.x, y: b.y,
+            maxRadius: (60 + r * 35) * explosionScale,
+            opacity: explosionIntensity * (1 - r * 0.12),
+            life: 1.0,
+            decay: 0.01 + r * 0.003,
+            delay: r * 4,
+          });
+        }
+
+        // Radiant light particles bursting outward
+        const particleCount = Math.min(4 + Math.floor(explosionScale * 2), 14);
+        for (let p = 0; p < particleCount; p++) {
+          const angle = (p / particleCount) * Math.PI * 2 + Math.random() * 0.3;
+          const dist = 30 + Math.random() * 50 * explosionScale;
+          halos.push({
+            type: 'glow',
+            x: b.x + Math.cos(angle) * dist,
+            y: b.y + Math.sin(angle) * dist,
+            maxRadius: 15 + Math.random() * 20 * explosionScale,
+            opacity: explosionIntensity * (0.4 + Math.random() * 0.3),
+            life: 1.0,
+            decay: 0.02 + Math.random() * 0.015,
+            delay: 2 + Math.floor(Math.random() * 6),
+          });
+        }
 
         lightBursts.splice(i, 1);
         checkMilestones();
@@ -1298,21 +1341,29 @@
       if (ray.active && prismHolding) {
         const result = pointToRayDistance(prismHoldX, prismHoldY, ray);
 
-        // Draw prism point glow
+        // Intensity scales with hold time and prism count (more lumens = more intense)
+        const prismCount = getUpgradeCount('prism');
+        const holdIntensity = Math.min(ray.holdTime / 60, 3); // ramps over 1s, up to 3x
+        const prismIntensity = 1 + prismCount * 0.15; // more prisms = brighter
+        const totalIntensity = Math.min(holdIntensity * prismIntensity, 4);
+
+        // Draw prism point glow — scales with intensity
+        const glowSize = 60 + totalIntensity * 30;
         const prismGlow = ctx.createRadialGradient(
           result.cx, result.cy, 0,
-          result.cx, result.cy, 60
+          result.cx, result.cy, glowSize
         );
-        prismGlow.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
-        prismGlow.addColorStop(0.3, `rgba(255, 255, 255, ${alpha * 0.3})`);
+        prismGlow.addColorStop(0, `rgba(255, 255, 255, ${alpha * Math.min(0.9 + totalIntensity * 0.1, 1.0)})`);
+        prismGlow.addColorStop(0.3, `rgba(255, 255, 255, ${alpha * Math.min(0.3 + totalIntensity * 0.15, 0.8)})`);
         prismGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.beginPath();
-        ctx.arc(result.cx, result.cy, 60, 0, Math.PI * 2);
+        ctx.arc(result.cx, result.cy, glowSize, 0, Math.PI * 2);
         ctx.fillStyle = prismGlow;
         ctx.fill();
 
-        // Rainbow dispersion rays in random directions (move only with player input)
-        const rayLength = 100;
+        // Rainbow dispersion rays — length and width scale with intensity
+        const rayLength = 100 + totalIntensity * 60;
+        const rayWidth = 2.5 + totalIntensity * 1.5;
 
         for (let c = 0; c < RAINBOW.length; c++) {
           const angle = ray.colorAngles ? ray.colorAngles[c] : 0;
@@ -1320,38 +1371,50 @@
           const endRY = result.cy + Math.sin(angle) * rayLength;
 
           const holdAlpha = Math.min(ray.holdTime / 30, 1) * alpha;
+          const intensifiedAlpha = Math.min(holdAlpha * (1 + totalIntensity * 0.3), 1.0);
 
           ctx.beginPath();
           ctx.moveTo(result.cx, result.cy);
           ctx.lineTo(endRX, endRY);
-          ctx.strokeStyle = RAINBOW[c] + (holdAlpha * 0.7) + ')';
-          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.7) + ')';
+          ctx.lineWidth = rayWidth;
           ctx.stroke();
 
-          // Small glow at the end of each rainbow ray
-          const glowR = 10;
+          // Glow at the end of each rainbow ray — scales with intensity
+          const glowR = 10 + totalIntensity * 8;
           ctx.beginPath();
           ctx.arc(endRX, endRY, glowR, 0, Math.PI * 2);
-          ctx.fillStyle = RAINBOW[c] + (holdAlpha * 0.3) + ')';
+          ctx.fillStyle = RAINBOW[c] + (intensifiedAlpha * 0.4) + ')';
           ctx.fill();
+
+          // Extra soft halo around each ray for high intensity
+          if (totalIntensity > 1.5) {
+            ctx.beginPath();
+            ctx.moveTo(result.cx, result.cy);
+            ctx.lineTo(endRX, endRY);
+            ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.15) + ')';
+            ctx.lineWidth = rayWidth * 4;
+            ctx.stroke();
+          }
         }
 
-        // Show lumen generation text
-        if (ray.holdTime % 30 === 0 && ray.holdTime > 0) {
-          const lumensThisBurst = Math.floor(ray.lumensGenerated);
+        // Intensify light based on lumens generated (pure light, no text)
+        if (ray.holdTime % 20 === 0 && ray.holdTime > 0) {
+          const lumensThisBurst = ray.lumensGenerated;
           if (lumensThisBurst > 0) {
+            const burstIntensity = Math.min(lumensThisBurst / 50, 1.5) + 0.3;
+            // Radiant glow pulse at prism point
             halos.push({
-              type: 'combo-text',
-              x: result.cx + (Math.random() - 0.5) * 40,
-              y: result.cy - 30,
-              text: '+' + formatNumber(lumensThisBurst),
-              opacity: 0.9,
+              type: 'glow',
+              x: result.cx + (Math.random() - 0.5) * 20,
+              y: result.cy + (Math.random() - 0.5) * 20,
+              maxRadius: 30 * burstIntensity,
+              opacity: 0.5 * burstIntensity,
               life: 1.0,
-              decay: 0.025,
+              decay: 0.03,
               delay: 0,
-              maxRadius: 0,
             });
-            ray.lumensGenerated = 0; // reset for next burst display
+            ray.lumensGenerated = 0;
           }
         }
       }
@@ -1367,6 +1430,163 @@
         ctx.setLineDash([4, 8]);
         ctx.stroke();
         ctx.setLineDash([]);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // --- Lightning bolt system ---
+  const lightningBolts = [];
+
+  function generateBoltPath(x1, y1, x2, y2, detail, jitter) {
+    // Generate a jagged lightning bolt path between two points
+    const points = [{ x: x1, y: y1 }];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const segments = detail || 8;
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const offsetX = (Math.random() - 0.5) * jitter;
+      const offsetY = (Math.random() - 0.5) * jitter * 0.3;
+      points.push({
+        x: x1 + dx * t + offsetX,
+        y: y1 + dy * t + offsetY,
+      });
+    }
+    points.push({ x: x2, y: y2 });
+    return points;
+  }
+
+  function spawnLightningBolt(clickX, clickY, lightningCount, delay) {
+    const intensity = Math.min(0.5 + lightningCount * 0.08, 1.2);
+    // Bolt goes from top of screen (or random edge) down toward click point
+    const startSide = Math.random();
+    let startX, startY;
+
+    if (startSide < 0.6) {
+      // From top
+      startX = clickX + (Math.random() - 0.5) * canvas.width * 0.4;
+      startY = -10;
+    } else if (startSide < 0.8) {
+      // From left
+      startX = -10;
+      startY = Math.random() * canvas.height * 0.4;
+    } else {
+      // From right
+      startX = canvas.width + 10;
+      startY = Math.random() * canvas.height * 0.4;
+    }
+
+    const jitter = 80 + lightningCount * 10;
+    const segments = 8 + Math.floor(lightningCount / 2);
+    const mainPath = generateBoltPath(startX, startY, clickX, clickY, segments, jitter);
+
+    // Generate branches
+    const branches = [];
+    const branchCount = Math.min(1 + Math.floor(lightningCount / 3), 5);
+    for (let b = 0; b < branchCount; b++) {
+      const branchIdx = 2 + Math.floor(Math.random() * (mainPath.length - 3));
+      const branchStart = mainPath[branchIdx];
+      const branchAngle = Math.atan2(clickY - startY, clickX - startX) + (Math.random() - 0.5) * 1.5;
+      const branchLen = 40 + Math.random() * 80 * intensity;
+      const branchEnd = {
+        x: branchStart.x + Math.cos(branchAngle) * branchLen,
+        y: branchStart.y + Math.sin(branchAngle) * branchLen,
+      };
+      branches.push(generateBoltPath(branchStart.x, branchStart.y, branchEnd.x, branchEnd.y, 4, jitter * 0.5));
+    }
+
+    lightningBolts.push({
+      mainPath: mainPath,
+      branches: branches,
+      life: 1.0,
+      decay: 0.035, // ~28 frames (~0.47s)
+      intensity: intensity,
+      delay: delay || 0,
+      glowWidth: 3 + lightningCount * 0.5,
+    });
+
+    // Impact glow at click point
+    halos.push({
+      type: 'glow',
+      x: clickX, y: clickY,
+      maxRadius: 50 * intensity,
+      opacity: 0.7 * intensity,
+      life: 1.0,
+      decay: 0.03,
+      delay: delay || 0,
+    });
+  }
+
+  function updateLightningBolts() {
+    for (let i = lightningBolts.length - 1; i >= 0; i--) {
+      const bolt = lightningBolts[i];
+      if (bolt.delay > 0) {
+        bolt.delay--;
+        continue;
+      }
+      bolt.life -= bolt.decay;
+      if (bolt.life <= 0) {
+        lightningBolts.splice(i, 1);
+      }
+    }
+  }
+
+  function drawBoltPath(points, alpha, width) {
+    if (points.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    // Bright core
+    ctx.strokeStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Electric blue-white glow
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.strokeStyle = 'rgba(200, 220, 255, ' + (alpha * 0.4) + ')';
+    ctx.lineWidth = width * 4;
+    ctx.stroke();
+
+    // Outer soft glow
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.strokeStyle = 'rgba(180, 200, 255, ' + (alpha * 0.12) + ')';
+    ctx.lineWidth = width * 10;
+    ctx.stroke();
+  }
+
+  function drawLightningBolts() {
+    for (const bolt of lightningBolts) {
+      if (bolt.delay > 0) continue;
+      // Flicker effect: lightning naturally flickers
+      const flicker = 0.7 + Math.random() * 0.3;
+      const alpha = Math.max(bolt.life, 0) * bolt.intensity * flicker;
+      if (alpha <= 0) continue;
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Draw main bolt
+      drawBoltPath(bolt.mainPath, alpha, bolt.glowWidth);
+
+      // Draw branches (thinner)
+      for (const branch of bolt.branches) {
+        drawBoltPath(branch, alpha * 0.6, bolt.glowWidth * 0.5);
       }
 
       ctx.restore();
@@ -1465,9 +1685,11 @@
     updateHalos();
     updateLightBursts();
     updatePrismRays();
+    updateLightningBolts();
     checkBurstSpawn();
     checkRaySpawn();
     drawHalos();
+    drawLightningBolts();
     drawPrismRays();
     drawLightBursts();
     requestAnimationFrame(gameLoop);
