@@ -1,12 +1,12 @@
-const CACHE_NAME = 'lights-on-v1';
+const CACHE_NAME = 'lights-on-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/game.js',
-  '/icons/icon.svg',
-  '/icons/icon-192.svg',
-  '/manifest.json'
+  './',
+  './index.html',
+  './style.css',
+  './game.js',
+  './icons/icon.svg',
+  './icons/icon-192.svg',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (e) => {
