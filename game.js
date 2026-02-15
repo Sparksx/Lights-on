@@ -325,7 +325,7 @@
 
   gameArea.addEventListener('click', handleClick);
   gameArea.addEventListener('touchstart', function (e) {
-    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle')) return;
+    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#victory-screen')) return;
     e.preventDefault();
     const touch = e.touches[0];
     handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target });
