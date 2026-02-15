@@ -53,19 +53,31 @@ html, body {
   transition: width 0.3s ease;
 }
 
-/* === UPGRADE TOGGLE (minimal breathing dot) === */
+/* === UPGRADE TOGGLE (minimal breathing dot, large touch target) === */
 #upgrade-toggle {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: 8px;
+  right: 8px;
   z-index: 20;
   cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+#upgrade-toggle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #fff;
-  border: none;
-  padding: 0;
+  transform: translate(-50%, -50%);
   animation: breathe 3s ease-in-out infinite;
 }
 
