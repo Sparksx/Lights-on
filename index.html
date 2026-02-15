@@ -58,7 +58,19 @@
   <script src="game.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+      // Auto-reload when a new Service Worker takes control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        // Check for SW updates every 60 seconds
+        setInterval(() => reg.update(), 60 * 1000);
+      });
     }
   </script>
 </body>

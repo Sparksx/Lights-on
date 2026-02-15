@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lights-on-v2';
+const CACHE_NAME = 'lights-on-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -25,8 +25,19 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// Network-first strategy: always try to fetch from network,
+// update cache with fresh response, fall back to cache if offline.
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request))
+    fetch(e.request)
+      .then((response) => {
+        // Only cache successful same-origin GET requests
+        if (response.ok && e.request.method === 'GET') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
