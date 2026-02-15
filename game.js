@@ -270,6 +270,39 @@
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.fillText(h.text, h.x, floatY);
         ctx.restore();
+      } else if (h.type === 'combo-glow') {
+        // Warm golden glow indicating combo multiplier
+        const r = Math.max(h.maxRadius, 1);
+        const w = h.warmth || 0;
+        const red = 255;
+        const green = Math.floor(255 - w * 55);
+        const blue = Math.floor(255 - w * 155);
+        const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
+        gradient.addColorStop(0, 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + (alpha * 0.8) + ')');
+        gradient.addColorStop(0.5, 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + (alpha * 0.3) + ')');
+        gradient.addColorStop(1, 'rgba(' + red + ', ' + green + ', ' + blue + ', 0)');
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      } else if (h.type === 'combo-ring') {
+        // Expanding warm ring for combo multiplier
+        const r = h.maxRadius * easeOutCubic(1 - h.life);
+        if (r < 1) continue;
+        const w = h.warmth || 0;
+        const red = 255;
+        const green = Math.floor(255 - w * 55);
+        const blue = Math.floor(255 - w * 155);
+        const lineWidth = Math.max(0.5, 2 * h.life);
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alpha + ')';
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      } else if (h.type === 'screen-flash') {
+        // Gentle full-screen flash for lightning bonus (epilepsy-safe)
+        ctx.fillStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else if (h.type === 'edge') {
         // Vignette glow from screen edges
         const w = canvas.width;
@@ -407,17 +440,30 @@
     return 5;
   }
 
-  function showComboText(x, y, multiplier, lumens) {
-    // Floating text showing combo info
+  function showComboGlow(x, y, multiplier) {
+    // Warm light glow indicating combo multiplier (no text)
+    const glowSize = 30 + multiplier * 20;
+    const warmth = Math.min(multiplier / 5, 1); // 0-1 warmth factor
     halos.push({
-      type: 'combo-text',
-      x, y: y - 20,
-      text: multiplier > 1 ? 'x' + multiplier + ' !' : '+' + lumens,
-      opacity: 1.0,
+      type: 'combo-glow',
+      x, y,
+      maxRadius: glowSize,
+      opacity: 0.3 + multiplier * 0.1,
+      life: 1.0,
+      decay: 0.015,
+      delay: 0,
+      warmth: warmth,
+    });
+    // Expanding warm ring
+    halos.push({
+      type: 'combo-ring',
+      x, y,
+      maxRadius: glowSize * 2,
+      opacity: 0.2 + multiplier * 0.08,
       life: 1.0,
       decay: 0.02,
       delay: 0,
-      maxRadius: 0,
+      warmth: warmth,
     });
   }
 
@@ -451,7 +497,26 @@
 
     addHalo(x, y);
     if (multiplier > 1) {
-      showComboText(x, y, multiplier, gain);
+      showComboGlow(x, y, multiplier);
+    }
+
+    // Lightning bonus: gentle screen flash (epilepsy-safe)
+    const lightningCount = getUpgradeCount('lightning');
+    if (lightningCount > 0) {
+      // Only add flash if no active flash exists (prevent rapid stacking)
+      const hasFlash = halos.some(function (h) { return h.type === 'screen-flash' && h.life > 0.5; });
+      if (!hasFlash) {
+        const flashIntensity = Math.min(0.03 + lightningCount * 0.005, 0.08);
+        halos.push({
+          type: 'screen-flash',
+          x: 0, y: 0,
+          maxRadius: 0,
+          opacity: flashIntensity,
+          life: 1.0,
+          decay: 0.04, // fades over ~25 frames (~0.4s) — smooth, epilepsy-safe
+          delay: 0,
+        });
+      }
     }
     checkMilestones();
     updateUI();
@@ -847,7 +912,7 @@
 
     // Random initial wander direction
     const angle = Math.random() * Math.PI * 2;
-    const speed = 0.3 + Math.random() * 0.4; // slow drift
+    const speed = 0.08 + Math.random() * 0.12; // very slow drift
 
     lightBursts.push({
       x, y,
@@ -863,6 +928,9 @@
       wanderSpeed: speed,
       flickerPhase: Math.random() * Math.PI * 2, // desync flicker per firefly
       restTimer: 0, // fireflies pause briefly
+      twinkleTimer: 120 + Math.floor(Math.random() * 300), // frames until next twinkle
+      twinkleActive: 0, // frames remaining of current twinkle
+      twinkleDuration: 0, // total duration of current twinkle
     });
   }
 
@@ -899,11 +967,11 @@
           b.restTimer = 30 + Math.random() * 60; // pause 0.5-1.5s at 60fps
         }
 
-        // Wander: gently rotate direction with random perturbation
-        b.wanderAngle += (Math.random() - 0.5) * 0.3;
-        // Occasional sharper turns (firefly-like darting)
-        if (Math.random() < 0.02) {
-          b.wanderAngle += (Math.random() - 0.5) * 1.5;
+        // Wander: very gently rotate direction
+        b.wanderAngle += (Math.random() - 0.5) * 0.1;
+        // Occasional gentle turns
+        if (Math.random() < 0.005) {
+          b.wanderAngle += (Math.random() - 0.5) * 0.8;
         }
 
         // Smoothly steer toward wander angle
@@ -922,6 +990,19 @@
       if (b.x > canvas.width - margin) { b.wanderAngle = Math.PI; b.x = canvas.width - margin; }
       if (b.y < margin) { b.wanderAngle = Math.PI / 2; b.y = margin; }
       if (b.y > canvas.height - margin) { b.wanderAngle = -Math.PI / 2; b.y = canvas.height - margin; }
+
+      // Twinkle timer: occasional brief bright flash
+      if (b.twinkleActive > 0) {
+        b.twinkleActive--;
+      } else {
+        b.twinkleTimer--;
+        if (b.twinkleTimer <= 0) {
+          const dur = 10 + Math.floor(Math.random() * 10); // 10-20 frames
+          b.twinkleActive = dur;
+          b.twinkleDuration = dur;
+          b.twinkleTimer = 120 + Math.floor(Math.random() * 300); // 2-7s until next
+        }
+      }
     }
   }
 
@@ -929,15 +1010,18 @@
     for (const b of lightBursts) {
       const lifeFade = Math.min(b.life * 2, 1); // fade in then out
 
-      // Firefly flicker: organic bioluminescent blinking
-      const flickerBase = Math.sin(b.pulse * 1.2 + b.flickerPhase);
-      const flickerFast = Math.sin(b.pulse * 3.7 + b.flickerPhase * 2.3);
-      // Combine slow pulse with occasional rapid flicker
-      const flicker = 0.5 + 0.35 * flickerBase + 0.15 * flickerFast;
-      const alpha = lifeFade * flicker;
+      // Twinkle progress (brief bright flash)
+      const twinkleT = b.twinkleDuration > 0 ? b.twinkleActive / b.twinkleDuration : 0;
+      const twinkleIntensity = b.twinkleActive > 0 ? Math.sin(twinkleT * Math.PI) : 0;
 
-      const pulseScale = 1 + 0.15 * Math.sin(b.pulse);
-      const r = b.radius * pulseScale;
+      // Subtle base glow with gentle pulsing
+      const flickerBase = Math.sin(b.pulse * 0.8 + b.flickerPhase);
+      const flicker = 0.25 + 0.1 * flickerBase;
+      const alpha = lifeFade * Math.min(flicker + twinkleIntensity * 0.75, 1.0);
+
+      const pulseScale = 1 + 0.05 * Math.sin(b.pulse);
+      const twinkleScale = 1 + twinkleIntensity * 0.4;
+      const r = b.radius * pulseScale * twinkleScale;
 
       // Warm firefly glow (slight yellow-green tint)
       const outerR = 255, outerG = 255, outerB = 220;
@@ -1072,6 +1156,9 @@
       dispersePhase: 0,     // animation phase for rainbow effect
       lumensGenerated: 0,   // track total generated
       fadeOutSpeed: 0,       // accelerated fade when released
+      colorAngles: null,    // random angles for rainbow rays (set on first touch)
+      lastHoldX: 0,
+      lastHoldY: 0,
     });
   }
 
@@ -1117,8 +1204,30 @@
         if (result.dist < 50) { // 50px touch zone around the ray
           ray.active = true;
           ray.holdTime++;
-          ray.dispersePhase += 0.08;
           ray.fadeOutSpeed = 0; // reset accelerated fade
+
+          // Initialize color angles on first touch (random directions)
+          if (!ray.colorAngles) {
+            ray.colorAngles = [];
+            for (let c = 0; c < 7; c++) {
+              ray.colorAngles.push(Math.random() * Math.PI * 2);
+            }
+            ray.lastHoldX = prismHoldX;
+            ray.lastHoldY = prismHoldY;
+          }
+
+          // Move angles only based on player movement (no per-frame animation)
+          const moveDx = prismHoldX - ray.lastHoldX;
+          const moveDy = prismHoldY - ray.lastHoldY;
+          const moveDist = Math.sqrt(moveDx * moveDx + moveDy * moveDy);
+          if (moveDist > 1) {
+            const shift = moveDist * 0.03;
+            for (let c = 0; c < ray.colorAngles.length; c++) {
+              ray.colorAngles[c] += shift * ((c % 2 === 0) ? 1 : -1) * (0.5 + c * 0.1);
+            }
+            ray.lastHoldX = prismHoldX;
+            ray.lastHoldY = prismHoldY;
+          }
 
           // Generate lumens! More prisms = more lumens per tick
           const prismCount = getUpgradeCount('prism');
@@ -1164,9 +1273,8 @@
       ctx.moveTo(ray.startX, ray.startY);
       ctx.lineTo(ray.endX, ray.endY);
 
-      // Ray width pulses gently
-      const widthPulse = 1 + 0.2 * Math.sin(ray.dispersePhase * 0.5);
-      const baseWidth = ray.active ? 3 * widthPulse : 2 * widthPulse;
+      // Static ray width (no animation)
+      const baseWidth = ray.active ? 3 : 2;
 
       // Create gradient along the ray
       const grad = ctx.createLinearGradient(ray.startX, ray.startY, ray.endX, ray.endY);
@@ -1203,19 +1311,11 @@
         ctx.fillStyle = prismGlow;
         ctx.fill();
 
-        // Rainbow dispersion rays fanning out from the touch point
-        const rayDx = ray.endX - ray.startX;
-        const rayDy = ray.endY - ray.startY;
-        const rayAngle = Math.atan2(rayDy, rayDx);
-        // Perpendicular direction for fan spread
-        const perpAngle = rayAngle + Math.PI / 2;
-
-        const fanSpread = 0.4; // radians of total fan spread
-        const rayLength = 80 + 40 * Math.sin(ray.dispersePhase);
+        // Rainbow dispersion rays in random directions (move only with player input)
+        const rayLength = 100;
 
         for (let c = 0; c < RAINBOW.length; c++) {
-          const t = (c / (RAINBOW.length - 1)) - 0.5; // -0.5 to 0.5
-          const angle = perpAngle + t * fanSpread;
+          const angle = ray.colorAngles ? ray.colorAngles[c] : 0;
           const endRX = result.cx + Math.cos(angle) * rayLength;
           const endRY = result.cy + Math.sin(angle) * rayLength;
 
@@ -1229,7 +1329,7 @@
           ctx.stroke();
 
           // Small glow at the end of each rainbow ray
-          const glowR = 8 + 4 * Math.sin(ray.dispersePhase + c);
+          const glowR = 10;
           ctx.beginPath();
           ctx.arc(endRX, endRY, glowR, 0, Math.PI * 2);
           ctx.fillStyle = RAINBOW[c] + (holdAlpha * 0.3) + ')';
@@ -1292,6 +1392,7 @@
     for (const ray of prismRays) {
       ray.active = false;
       ray.holdTime = 0;
+      ray.colorAngles = null; // reset so next touch gets fresh random angles
     }
   }
 
