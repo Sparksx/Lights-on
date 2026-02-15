@@ -400,6 +400,26 @@
     renderUpgrades();
   });
 
+  // --- Reset button ---
+  const resetBtn = document.getElementById('reset-btn');
+  resetBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    localStorage.removeItem(SAVE_KEY);
+    state.lumens = 0;
+    state.totalLumens = 0;
+    state.clickPower = 1;
+    state.lumensPerSecond = 0;
+    state.upgrades = {};
+    state.victoryReached = false;
+    upgradeUnlocked = false;
+    upgradeToggle.classList.add('hidden');
+    upgradePanel.classList.remove('open');
+    victoryScreen.classList.add('hidden');
+    halos.length = 0;
+    updateUI();
+    renderUpgrades();
+  });
+
   // --- Upgrade panel toggle ---
   upgradeToggle.addEventListener('click', function (e) {
     e.stopPropagation();

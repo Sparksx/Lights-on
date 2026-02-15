@@ -190,6 +190,26 @@ html, body {
   font-size: 0.8rem;
 }
 
+/* === RESET BUTTON === */
+#reset-btn {
+  display: block;
+  margin: 20px auto 10px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.3);
+  padding: 8px 20px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+#reset-btn:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* === VICTORY === */
 #victory-screen {
   position: absolute;
