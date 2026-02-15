@@ -36,7 +36,7 @@
       desc: 'Cligne dans le noir',
       baseCost: 150,
       costMultiplier: 1.7,
-      type: 'click',
+      type: 'burst',
       value: 1,
       maxCount: 25,
       unlockAt: 80,
@@ -681,6 +681,7 @@
 
   function checkBurstSpawn() {
     if (state.victoryReached) return;
+    if (getUpgradeCount('firefly') === 0) return;
     if (Date.now() >= nextBurstTime && lightBursts.length < 3) {
       spawnLightBurst();
       nextBurstTime = Date.now() + 10000 + Math.random() * 15000;
