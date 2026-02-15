@@ -312,10 +312,20 @@
   function renderUpgrades() {
     lumenCounter.textContent = formatNumber(Math.floor(state.lumens)) + ' lm';
     upgradeList.innerHTML = '';
-    for (const up of UPGRADES) {
-      if (state.totalLumens < up.unlockAt && getUpgradeCount(up.id) === 0) continue;
 
+    let nextShown = false; // only show one upcoming unpurchased upgrade
+
+    for (const up of UPGRADES) {
       const count = getUpgradeCount(up.id);
+      const unlocked = state.totalLumens >= up.unlockAt;
+
+      // Show purchased upgrades always
+      if (count === 0) {
+        // Not purchased: show only the next unlocked one
+        if (!unlocked || nextShown) continue;
+        nextShown = true;
+      }
+
       const cost = getUpgradeCost(up);
       const canAfford = state.lumens >= cost;
       const isMaxed = count >= up.maxCount;

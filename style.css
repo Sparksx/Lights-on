@@ -82,8 +82,8 @@ html, body {
 }
 
 @keyframes breathe {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
+  0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
 }
 
 /* === UPGRADE PANEL === */
@@ -148,12 +148,18 @@ html, body {
 }
 
 .upgrade-item.locked {
-  opacity: 0.15;
+  opacity: 0.3;
   cursor: default;
 }
 
 .upgrade-item.affordable:not(.maxed) {
   border-width: 2px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.4); }
+  50% { border-color: rgba(255, 255, 255, 1); }
 }
 
 .upgrade-item.maxed {
