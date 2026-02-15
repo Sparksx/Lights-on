@@ -1727,10 +1727,12 @@
     const cost = getUpgradeCost(upgrade);
     const count = getUpgradeCount(upgrade.id);
 
-    if (state.lumens < cost) return;
+    if (!adminMode && state.lumens < cost) return;
     if (count >= upgrade.maxCount) return;
 
-    state.lumens -= cost;
+    if (!adminMode) {
+      state.lumens -= cost;
+    }
     state.upgrades[upgrade.id] = count + 1;
 
     if (upgrade.type === 'click') {
@@ -1789,15 +1791,19 @@
       const count = getUpgradeCount(up.id);
       const unlocked = state.totalLumens >= up.unlockAt;
 
-      // Show purchased upgrades always
+      // In admin mode show all upgrades; otherwise show purchased + next unlocked
       if (count === 0) {
-        // Not purchased: show only the next unlocked one
-        if (!unlocked || nextShown) continue;
-        nextShown = true;
+        if (adminMode) {
+          // show all upgrades in admin mode
+        } else if (!unlocked || nextShown) {
+          continue;
+        } else {
+          nextShown = true;
+        }
       }
 
       const cost = getUpgradeCost(up);
-      const canAfford = state.lumens >= cost;
+      const canAfford = adminMode || state.lumens >= cost;
       const isMaxed = count >= up.maxCount;
 
       const item = document.createElement('div');
@@ -1813,10 +1819,11 @@
       const displayName = getUpgradeName(up);
       const displayDesc = getUpgradeDesc(up);
 
+      const costLabel = isMaxed ? 'MAX' : (adminMode ? 'GRATUIT' : formatNumber(cost) + ' ' + unit);
       item.innerHTML = `
         <div class="upgrade-name">${displayName}</div>
         <div class="upgrade-desc">${displayDesc}</div>
-        <div class="upgrade-cost">${isMaxed ? 'MAX' : formatNumber(cost) + ' ' + unit}</div>
+        <div class="upgrade-cost">${costLabel}</div>
         ${count > 0 ? `<div class="upgrade-count">x${count}</div>` : ''}
       `;
 
@@ -2052,36 +2059,13 @@
     window.location.reload();
   });
 
-  // --- DEV button: Ready for Sun ---
-  const devBtn = document.getElementById('dev-btn');
-  devBtn.addEventListener('click', function (e) {
+  // --- Admin mode toggle ---
+  let adminMode = false;
+  const adminCheckbox = document.getElementById('admin-checkbox');
+  adminCheckbox.addEventListener('change', function (e) {
     e.stopPropagation();
-    // Max out all upgrades except sun
-    for (const up of UPGRADES) {
-      if (up.type === 'victory') continue;
-      state.upgrades[up.id] = up.maxCount;
-      if (up.type === 'click') {
-        // Recalculate click power
-      }
-    }
-    // Recalculate click power from scratch
-    let cp = 1;
-    for (const up of UPGRADES) {
-      if (up.type === 'click') {
-        cp += up.value * getUpgradeCount(up.id);
-      }
-    }
-    state.clickPower = cp;
-    // Give enough lumens to buy the sun
-    state.lumens = 1200000000000; // 1.2T
-    state.totalLumens = 1200000000000;
-    recalcPassive();
-    upgradeUnlocked = true;
-    upgradeToggle.classList.remove('hidden');
-    regenerateStars();
+    adminMode = adminCheckbox.checked;
     renderUpgrades();
-    updateUI();
-    save();
   });
 
   // --- Upgrade panel toggle ---
