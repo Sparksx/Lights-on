@@ -368,23 +368,26 @@
   gameArea.addEventListener('mousedown', function (e) {
     if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle')) return;
     startRub(e.clientX, e.clientY);
+    startPrismHold(e.clientX, e.clientY);
   });
   gameArea.addEventListener('mousemove', function (e) {
     if (e.target.closest('#upgrade-panel')) return;
     moveRub(e.clientX, e.clientY);
+    movePrismHold(e.clientX, e.clientY);
   });
-  gameArea.addEventListener('mouseup', endRub);
-  gameArea.addEventListener('mouseleave', endRub);
+  gameArea.addEventListener('mouseup', function () { endRub(); endPrismHold(); });
+  gameArea.addEventListener('mouseleave', function () { endRub(); endPrismHold(); });
 
   gameArea.addEventListener('touchmove', function (e) {
     if (e.target.closest('#upgrade-panel')) return;
     e.preventDefault();
     const touch = e.touches[0];
     moveRub(touch.clientX, touch.clientY);
+    movePrismHold(touch.clientX, touch.clientY);
   }, { passive: false });
 
-  gameArea.addEventListener('touchend', endRub);
-  gameArea.addEventListener('touchcancel', endRub);
+  gameArea.addEventListener('touchend', function () { endRub(); endPrismHold(); });
+  gameArea.addEventListener('touchcancel', function () { endRub(); endPrismHold(); });
 
   // --- Combo system ---
   let comboCount = 0;
@@ -456,6 +459,7 @@
     e.preventDefault();
     const touch = e.touches[0];
     startRub(touch.clientX, touch.clientY);
+    startPrismHold(touch.clientX, touch.clientY);
     handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target });
   }, { passive: false });
 
@@ -605,6 +609,8 @@
     victoryScreen.classList.add('hidden');
     halos.length = 0;
     lightBursts.length = 0;
+    prismRays.length = 0;
+    prismHolding = false;
     comboCount = 0;
     updateUI();
     renderUpgrades();
@@ -627,6 +633,8 @@
     victoryScreen.classList.add('hidden');
     halos.length = 0;
     lightBursts.length = 0;
+    prismRays.length = 0;
+    prismHolding = false;
     comboCount = 0;
     updateUI();
     renderUpgrades();
@@ -669,6 +677,10 @@
     const baseBonus = Math.max(10, Math.floor(state.totalLumens * 0.03));
     const bonus = baseBonus + Math.floor(Math.random() * baseBonus);
 
+    // Random initial wander direction
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.3 + Math.random() * 0.4; // slow drift
+
     lightBursts.push({
       x, y,
       radius: 20,
@@ -676,6 +688,13 @@
       life: 1.0,
       decay: 0.002, // ~8 seconds to disappear
       pulse: 0,
+      // Firefly movement properties
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      wanderAngle: angle,
+      wanderSpeed: speed,
+      flickerPhase: Math.random() * Math.PI * 2, // desync flicker per firefly
+      restTimer: 0, // fireflies pause briefly
     });
   }
 
@@ -689,38 +708,89 @@
   }
 
   function updateLightBursts() {
+    const margin = 30;
     for (let i = lightBursts.length - 1; i >= 0; i--) {
       const b = lightBursts[i];
       b.life -= b.decay;
       b.pulse += 0.05;
       if (b.life <= 0) {
         lightBursts.splice(i, 1);
+        continue;
       }
+
+      // --- Firefly organic movement ---
+      // Rest timer: fireflies occasionally pause
+      if (b.restTimer > 0) {
+        b.restTimer -= 1;
+        // While resting, slow down gradually
+        b.vx *= 0.92;
+        b.vy *= 0.92;
+      } else {
+        // Randomly decide to rest (like a real firefly pausing)
+        if (Math.random() < 0.003) {
+          b.restTimer = 30 + Math.random() * 60; // pause 0.5-1.5s at 60fps
+        }
+
+        // Wander: gently rotate direction with random perturbation
+        b.wanderAngle += (Math.random() - 0.5) * 0.3;
+        // Occasional sharper turns (firefly-like darting)
+        if (Math.random() < 0.02) {
+          b.wanderAngle += (Math.random() - 0.5) * 1.5;
+        }
+
+        // Smoothly steer toward wander angle
+        const targetVx = Math.cos(b.wanderAngle) * b.wanderSpeed;
+        const targetVy = Math.sin(b.wanderAngle) * b.wanderSpeed;
+        b.vx += (targetVx - b.vx) * 0.08;
+        b.vy += (targetVy - b.vy) * 0.08;
+      }
+
+      // Apply velocity
+      b.x += b.vx;
+      b.y += b.vy;
+
+      // Soft boundary steering — gently push back toward center
+      if (b.x < margin) { b.wanderAngle = 0; b.x = margin; }
+      if (b.x > canvas.width - margin) { b.wanderAngle = Math.PI; b.x = canvas.width - margin; }
+      if (b.y < margin) { b.wanderAngle = Math.PI / 2; b.y = margin; }
+      if (b.y > canvas.height - margin) { b.wanderAngle = -Math.PI / 2; b.y = canvas.height - margin; }
     }
   }
 
   function drawLightBursts() {
     for (const b of lightBursts) {
-      const alpha = Math.min(b.life * 2, 1); // fade in then out
+      const lifeFade = Math.min(b.life * 2, 1); // fade in then out
+
+      // Firefly flicker: organic bioluminescent blinking
+      const flickerBase = Math.sin(b.pulse * 1.2 + b.flickerPhase);
+      const flickerFast = Math.sin(b.pulse * 3.7 + b.flickerPhase * 2.3);
+      // Combine slow pulse with occasional rapid flicker
+      const flicker = 0.5 + 0.35 * flickerBase + 0.15 * flickerFast;
+      const alpha = lifeFade * flicker;
+
       const pulseScale = 1 + 0.15 * Math.sin(b.pulse);
       const r = b.radius * pulseScale;
 
-      // Outer glow
+      // Warm firefly glow (slight yellow-green tint)
+      const outerR = 255, outerG = 255, outerB = 220;
+      const coreR = 255, coreG = 255, coreB = 240;
+
+      // Outer glow — warm halo
       const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 2.5);
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.4})`);
-      gradient.addColorStop(0.4, `rgba(255, 255, 255, ${alpha * 0.15})`);
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      gradient.addColorStop(0, `rgba(${outerR}, ${outerG}, ${outerB}, ${alpha * 0.4})`);
+      gradient.addColorStop(0.4, `rgba(${outerR}, ${outerG}, ${outerB}, ${alpha * 0.12})`);
+      gradient.addColorStop(1, `rgba(${outerR}, ${outerG}, ${outerB}, 0)`);
       ctx.beginPath();
       ctx.arc(b.x, b.y, r * 2.5, 0, Math.PI * 2);
       ctx.fillStyle = gradient;
       ctx.fill();
 
-      // Core
-      const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
-      core.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
-      core.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.2})`);
+      // Core — bright center
+      const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 0.7);
+      core.addColorStop(0, `rgba(${coreR}, ${coreG}, ${coreB}, ${alpha * 0.9})`);
+      core.addColorStop(1, `rgba(${coreR}, ${coreG}, ${coreB}, ${alpha * 0.15})`);
       ctx.beginPath();
-      ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, r * 0.7, 0, Math.PI * 2);
       ctx.fillStyle = core;
       ctx.fill();
     }
@@ -767,6 +837,294 @@
       }
     }
     return false;
+  }
+
+  // --- Prism ray mechanic ---
+  const prismRays = [];
+  let nextRayTime = Date.now() + 15000 + Math.random() * 20000;
+  let prismHolding = false;
+  let prismHoldX = 0;
+  let prismHoldY = 0;
+
+  // Rainbow colors for the prism dispersion effect
+  const RAINBOW = [
+    'rgba(255, 0, 0, ',      // red
+    'rgba(255, 127, 0, ',    // orange
+    'rgba(255, 255, 0, ',    // yellow
+    'rgba(0, 255, 0, ',      // green
+    'rgba(0, 127, 255, ',    // blue
+    'rgba(75, 0, 130, ',     // indigo
+    'rgba(148, 0, 211, ',    // violet
+  ];
+
+  function spawnPrismRay() {
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Choose a random trajectory across the screen
+    // Pick two edges for start/end
+    const side = Math.floor(Math.random() * 4);
+    let startX, startY, endX, endY;
+
+    if (side === 0) { // start from left
+      startX = -10;
+      startY = h * 0.2 + Math.random() * h * 0.6;
+      endX = w + 10;
+      endY = h * 0.2 + Math.random() * h * 0.6;
+    } else if (side === 1) { // start from top
+      startX = w * 0.2 + Math.random() * w * 0.6;
+      startY = -10;
+      endX = w * 0.2 + Math.random() * w * 0.6;
+      endY = h + 10;
+    } else if (side === 2) { // start from right
+      startX = w + 10;
+      startY = h * 0.2 + Math.random() * h * 0.6;
+      endX = -10;
+      endY = h * 0.2 + Math.random() * h * 0.6;
+    } else { // start from bottom
+      startX = w * 0.2 + Math.random() * w * 0.6;
+      startY = h + 10;
+      endX = w * 0.2 + Math.random() * w * 0.6;
+      endY = -10;
+    }
+
+    // Duration scales with prism count: more prisms = ray lasts longer
+    const prismCount = getUpgradeCount('prism');
+    const baseDuration = 6; // seconds
+    const bonusDuration = Math.min(prismCount * 0.5, 6);
+    const totalDuration = baseDuration + bonusDuration;
+
+    prismRays.push({
+      startX, startY,
+      endX, endY,
+      life: 1.0,
+      decay: 1 / (totalDuration * 60), // 60fps
+      active: false,        // is player holding on it?
+      holdTime: 0,          // total time held (frames)
+      dispersePhase: 0,     // animation phase for rainbow effect
+      lumensGenerated: 0,   // track total generated
+      fadeOutSpeed: 0,       // accelerated fade when released
+    });
+  }
+
+  function checkRaySpawn() {
+    if (state.victoryReached) return;
+    if (getUpgradeCount('prism') === 0) return;
+    if (Date.now() >= nextRayTime && prismRays.length < 2) {
+      spawnPrismRay();
+      // More prisms = more frequent rays
+      const prismCount = getUpgradeCount('prism');
+      const interval = Math.max(8000, 20000 - prismCount * 800);
+      nextRayTime = Date.now() + interval + Math.random() * interval * 0.5;
+    }
+  }
+
+  // Check if a point is near the ray line
+  function pointToRayDistance(px, py, ray) {
+    const dx = ray.endX - ray.startX;
+    const dy = ray.endY - ray.startY;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return { dist: Infinity, cx: ray.startX, cy: ray.startY, t: 0 };
+
+    // Project point onto line, clamped to [0,1]
+    let t = ((px - ray.startX) * dx + (py - ray.startY) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const closestX = ray.startX + t * dx;
+    const closestY = ray.startY + t * dy;
+
+    const distX = px - closestX;
+    const distY = py - closestY;
+    return { dist: Math.sqrt(distX * distX + distY * distY), cx: closestX, cy: closestY, t: t };
+  }
+
+  function updatePrismRays() {
+    for (let i = prismRays.length - 1; i >= 0; i--) {
+      const ray = prismRays[i];
+
+      // Check if player is holding on this ray
+      ray.active = false;
+      if (prismHolding && ray.life > 0.05) {
+        const result = pointToRayDistance(prismHoldX, prismHoldY, ray);
+        if (result.dist < 50) { // 50px touch zone around the ray
+          ray.active = true;
+          ray.holdTime++;
+          ray.dispersePhase += 0.08;
+          ray.fadeOutSpeed = 0; // reset accelerated fade
+
+          // Generate lumens! More prisms = more lumens per tick
+          const prismCount = getUpgradeCount('prism');
+          const baseLumens = 0.5 + prismCount * 0.3;
+          // Ramp up generation over time held (rewards sustained hold)
+          const holdBonus = Math.min(ray.holdTime / 120, 2); // ramps over 2s, max 2x
+          const gain = baseLumens * (1 + holdBonus);
+
+          state.lumens += gain;
+          state.totalLumens += gain;
+          ray.lumensGenerated += gain;
+
+          // The ray drains faster while being used (player extracts its energy)
+          ray.life -= ray.decay * 1.5;
+
+          checkMilestones();
+          updateUI();
+        }
+      }
+
+      // Natural decay
+      ray.life -= ray.decay;
+
+      // When life runs low, fade accelerates
+      if (ray.life < 0.2) {
+        ray.life -= ray.decay * 2;
+      }
+
+      if (ray.life <= 0) {
+        prismRays.splice(i, 1);
+      }
+    }
+  }
+
+  function drawPrismRays() {
+    for (const ray of prismRays) {
+      const alpha = Math.min(ray.life * 3, 1) * 0.8; // quick fade-in, slow fade-out
+      if (alpha <= 0) continue;
+
+      // Draw the base white ray
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(ray.startX, ray.startY);
+      ctx.lineTo(ray.endX, ray.endY);
+
+      // Ray width pulses gently
+      const widthPulse = 1 + 0.2 * Math.sin(ray.dispersePhase * 0.5);
+      const baseWidth = ray.active ? 3 * widthPulse : 2 * widthPulse;
+
+      // Create gradient along the ray
+      const grad = ctx.createLinearGradient(ray.startX, ray.startY, ray.endX, ray.endY);
+      grad.addColorStop(0, `rgba(255, 255, 255, 0)`);
+      grad.addColorStop(0.15, `rgba(255, 255, 255, ${alpha})`);
+      grad.addColorStop(0.85, `rgba(255, 255, 255, ${alpha})`);
+      grad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = baseWidth;
+      ctx.stroke();
+
+      // Soft glow around the ray
+      ctx.beginPath();
+      ctx.moveTo(ray.startX, ray.startY);
+      ctx.lineTo(ray.endX, ray.endY);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.15})`;
+      ctx.lineWidth = baseWidth * 6;
+      ctx.stroke();
+
+      // If active (player holding), draw rainbow dispersion
+      if (ray.active && prismHolding) {
+        const result = pointToRayDistance(prismHoldX, prismHoldY, ray);
+
+        // Draw prism point glow
+        const prismGlow = ctx.createRadialGradient(
+          result.cx, result.cy, 0,
+          result.cx, result.cy, 60
+        );
+        prismGlow.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+        prismGlow.addColorStop(0.3, `rgba(255, 255, 255, ${alpha * 0.3})`);
+        prismGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.beginPath();
+        ctx.arc(result.cx, result.cy, 60, 0, Math.PI * 2);
+        ctx.fillStyle = prismGlow;
+        ctx.fill();
+
+        // Rainbow dispersion rays fanning out from the touch point
+        const rayDx = ray.endX - ray.startX;
+        const rayDy = ray.endY - ray.startY;
+        const rayAngle = Math.atan2(rayDy, rayDx);
+        // Perpendicular direction for fan spread
+        const perpAngle = rayAngle + Math.PI / 2;
+
+        const fanSpread = 0.4; // radians of total fan spread
+        const rayLength = 80 + 40 * Math.sin(ray.dispersePhase);
+
+        for (let c = 0; c < RAINBOW.length; c++) {
+          const t = (c / (RAINBOW.length - 1)) - 0.5; // -0.5 to 0.5
+          const angle = perpAngle + t * fanSpread;
+          const endRX = result.cx + Math.cos(angle) * rayLength;
+          const endRY = result.cy + Math.sin(angle) * rayLength;
+
+          const holdAlpha = Math.min(ray.holdTime / 30, 1) * alpha;
+
+          ctx.beginPath();
+          ctx.moveTo(result.cx, result.cy);
+          ctx.lineTo(endRX, endRY);
+          ctx.strokeStyle = RAINBOW[c] + (holdAlpha * 0.7) + ')';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          // Small glow at the end of each rainbow ray
+          const glowR = 8 + 4 * Math.sin(ray.dispersePhase + c);
+          ctx.beginPath();
+          ctx.arc(endRX, endRY, glowR, 0, Math.PI * 2);
+          ctx.fillStyle = RAINBOW[c] + (holdAlpha * 0.3) + ')';
+          ctx.fill();
+        }
+
+        // Show lumen generation text
+        if (ray.holdTime % 30 === 0 && ray.holdTime > 0) {
+          const lumensThisBurst = Math.floor(ray.lumensGenerated);
+          if (lumensThisBurst > 0) {
+            halos.push({
+              type: 'combo-text',
+              x: result.cx + (Math.random() - 0.5) * 40,
+              y: result.cy - 30,
+              text: '+' + formatNumber(lumensThisBurst),
+              opacity: 0.9,
+              life: 1.0,
+              decay: 0.025,
+              delay: 0,
+              maxRadius: 0,
+            });
+            ray.lumensGenerated = 0; // reset for next burst display
+          }
+        }
+      }
+
+      // Draw a subtle "energy remaining" indicator — ray dims from end
+      if (ray.life < 0.5) {
+        const fadeAlpha = ray.life / 0.5;
+        ctx.beginPath();
+        ctx.moveTo(ray.startX, ray.startY);
+        ctx.lineTo(ray.endX, ray.endY);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - fadeAlpha) * 0.3})`;
+        ctx.lineWidth = baseWidth * 0.5;
+        ctx.setLineDash([4, 8]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // --- Prism interaction handlers ---
+  function startPrismHold(x, y) {
+    prismHolding = true;
+    prismHoldX = x;
+    prismHoldY = y;
+  }
+
+  function movePrismHold(x, y) {
+    if (!prismHolding) return;
+    prismHoldX = x;
+    prismHoldY = y;
+  }
+
+  function endPrismHold() {
+    prismHolding = false;
+    // Reset hold time on all rays
+    for (const ray of prismRays) {
+      ray.active = false;
+      ray.holdTime = 0;
+    }
   }
 
   // --- Passive income tick ---
@@ -832,8 +1190,11 @@
   function gameLoop() {
     updateHalos();
     updateLightBursts();
+    updatePrismRays();
     checkBurstSpawn();
+    checkRaySpawn();
     drawHalos();
+    drawPrismRays();
     drawLightBursts();
     requestAnimationFrame(gameLoop);
   }
