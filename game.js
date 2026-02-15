@@ -188,6 +188,17 @@
         delay: i * 6,
       });
     }
+
+    // Persistent residual glow (slow fade)
+    halos.push({
+      type: 'persist',
+      x, y,
+      maxRadius: 45 * scale,
+      opacity: 0.08 + progress * 0.06,
+      life: 1.0,
+      decay: 0.003,
+      delay: 4,
+    });
   }
 
   function updateHalos() {
@@ -235,8 +246,61 @@
         ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.lineWidth = lineWidth;
         ctx.stroke();
+      } else if (h.type === 'persist') {
+        // Soft lingering glow — fixed size, fades slowly
+        const r = h.maxRadius;
+        const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.7})`);
+        gradient.addColorStop(0.4, `rgba(255, 255, 255, ${alpha * 0.3})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      } else if (h.type === 'edge') {
+        // Vignette glow from screen edges
+        const w = canvas.width;
+        const ht = canvas.height;
+        const thickness = h.maxRadius;
+        // Top
+        const topG = ctx.createLinearGradient(0, 0, 0, thickness);
+        topG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        topG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = topG;
+        ctx.fillRect(0, 0, w, thickness);
+        // Bottom
+        const botG = ctx.createLinearGradient(0, ht, 0, ht - thickness);
+        botG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        botG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = botG;
+        ctx.fillRect(0, ht - thickness, w, thickness);
+        // Left
+        const leftG = ctx.createLinearGradient(0, 0, thickness, 0);
+        leftG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        leftG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = leftG;
+        ctx.fillRect(0, 0, thickness, ht);
+        // Right
+        const rightG = ctx.createLinearGradient(w, 0, w - thickness, 0);
+        rightG.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        rightG.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = rightG;
+        ctx.fillRect(w - thickness, 0, thickness, ht);
       }
     }
+  }
+
+  // --- Edge glow (upgrade reward) ---
+  function addEdgeGlow() {
+    halos.push({
+      type: 'edge',
+      x: 0, y: 0,
+      maxRadius: 100,
+      opacity: 0.10,
+      life: 1.0,
+      decay: 0.008,
+      delay: 0,
+    });
   }
 
   // --- Click handler ---
@@ -294,6 +358,7 @@
       return;
     }
 
+    addEdgeGlow();
     recalcPassive();
     renderUpgrades();
     updateUI();
