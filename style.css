@@ -255,6 +255,99 @@ html, body {
   color: #000;
 }
 
+/* === LIGHT SWITCH === */
+#switch-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  animation: switchFadeIn 1.5s ease forwards;
+}
+
+@keyframes switchFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+#switch-hint {
+  font-size: 1rem;
+  letter-spacing: 4px;
+  margin-bottom: 40px;
+  opacity: 0;
+  animation: hintAppear 2s ease 0.8s forwards;
+  text-transform: uppercase;
+}
+
+@keyframes hintAppear {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 0.6; transform: translateY(0); }
+}
+
+#light-switch {
+  cursor: pointer;
+  opacity: 0;
+  animation: switchAppear 1s ease 0.3s forwards;
+}
+
+@keyframes switchAppear {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+#switch-plate {
+  width: 60px;
+  height: 100px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.2s;
+}
+
+#switch-plate:hover {
+  border-color: rgba(255, 255, 255, 1);
+}
+
+#switch-lever {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+#switch-plate:hover #switch-lever {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+#switch-lever.on {
+  bottom: auto;
+  top: 10px;
+  background: #fff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+/* === SUN CINEMATIC === */
+#sun-cinematic {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 45;
+  pointer-events: none;
+}
+
 /* === HIDDEN UTILITY === */
 .hidden {
   display: none !important;
