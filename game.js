@@ -302,6 +302,560 @@
   const lightSwitch = document.getElementById('light-switch');
   const switchLever = document.getElementById('switch-lever');
 
+  // --- Background stars system (Étoile upgrade #9) ---
+  const bgStars = [];
+  let lastStarCount = 0;
+
+  function regenerateStars() {
+    const starCount = getUpgradeCount('star');
+    if (starCount === lastStarCount && bgStars.length > 0) return;
+    lastStarCount = starCount;
+    bgStars.length = 0;
+    // Each star level adds 8 stars (max 10 levels = 80 stars)
+    const total = starCount * 8;
+    for (let i = 0; i < total; i++) {
+      bgStars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: 0.5 + Math.random() * 1.5,
+        baseAlpha: 0.15 + Math.random() * 0.4,
+        twinkleSpeed: 0.01 + Math.random() * 0.03,
+        twinklePhase: Math.random() * Math.PI * 2,
+        constellationId: -1, // will be set by constellation system
+        constellationIdx: -1,
+      });
+    }
+  }
+
+  function updateStars() {
+    for (const s of bgStars) {
+      s.twinklePhase += s.twinkleSpeed;
+    }
+  }
+
+  function drawStars() {
+    const starCount = getUpgradeCount('star');
+    if (starCount === 0) return;
+    for (const s of bgStars) {
+      const twinkle = 0.5 + 0.5 * Math.sin(s.twinklePhase);
+      const alpha = s.baseAlpha * twinkle;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+      ctx.fill();
+    }
+  }
+
+  // --- Constellation system (upgrade #16) ---
+  // Known constellation patterns (normalized 0-1 coordinates)
+  const CONSTELLATION_TEMPLATES = [
+    { name: 'Grande Ourse', stars: [{x:0.0,y:0.4},{x:0.15,y:0.25},{x:0.3,y:0.2},{x:0.45,y:0.25},{x:0.55,y:0.4},{x:0.7,y:0.55},{x:0.85,y:0.5}], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]] },
+    { name: 'Orion', stars: [{x:0.3,y:0.0},{x:0.7,y:0.05},{x:0.2,y:0.35},{x:0.5,y:0.4},{x:0.8,y:0.35},{x:0.5,y:0.5},{x:0.35,y:0.7},{x:0.5,y:0.65},{x:0.65,y:0.7},{x:0.25,y:1.0},{x:0.75,y:1.0}], edges: [[0,2],[1,4],[2,3],[3,4],[2,5],[4,5],[5,6],[5,8],[6,7],[7,8],[6,9],[8,10]] },
+    { name: 'Cassiopée', stars: [{x:0.0,y:0.6},{x:0.25,y:0.2},{x:0.5,y:0.5},{x:0.75,y:0.15},{x:1.0,y:0.55}], edges: [[0,1],[1,2],[2,3],[3,4]] },
+    { name: 'Cygne', stars: [{x:0.5,y:0.0},{x:0.5,y:0.3},{x:0.5,y:0.6},{x:0.5,y:1.0},{x:0.15,y:0.45},{x:0.85,y:0.45}], edges: [[0,1],[1,2],[2,3],[4,2],[2,5]] },
+    { name: 'Lion', stars: [{x:0.3,y:0.0},{x:0.15,y:0.2},{x:0.0,y:0.45},{x:0.2,y:0.55},{x:0.35,y:0.35},{x:0.5,y:0.25},{x:0.85,y:0.3},{x:1.0,y:0.55},{x:0.7,y:0.6}], edges: [[0,1],[1,2],[2,3],[3,4],[4,0],[0,5],[5,6],[6,7],[7,8],[8,6]] },
+    { name: 'Scorpion', stars: [{x:0.2,y:0.0},{x:0.25,y:0.15},{x:0.3,y:0.3},{x:0.4,y:0.45},{x:0.5,y:0.55},{x:0.6,y:0.65},{x:0.7,y:0.75},{x:0.8,y:0.85},{x:0.9,y:0.9},{x:1.0,y:0.85}], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]] },
+    { name: 'Lyre', stars: [{x:0.5,y:0.0},{x:0.3,y:0.4},{x:0.7,y:0.4},{x:0.25,y:0.8},{x:0.75,y:0.8}], edges: [[0,1],[0,2],[1,2],[1,3],[2,4],[3,4]] },
+    { name: 'Gémeaux', stars: [{x:0.3,y:0.0},{x:0.7,y:0.0},{x:0.25,y:0.3},{x:0.75,y:0.3},{x:0.2,y:0.6},{x:0.8,y:0.6},{x:0.3,y:0.9},{x:0.7,y:0.9}], edges: [[0,1],[0,2],[1,3],[2,4],[3,5],[4,6],[5,7],[2,3]] },
+  ];
+
+  const activeConstellations = [];
+  let nextConstellationTime = Date.now() + 5000;
+  let constellationDragActive = false;
+  let constellationDragPath = []; // {x, y} points the user has dragged through
+  let constellationTracedEdges = []; // edges already validated in current drag
+
+  function spawnConstellation() {
+    const constellationCount = getUpgradeCount('constellation');
+    if (constellationCount === 0) return;
+    if (activeConstellations.length >= Math.min(2 + Math.floor(constellationCount / 2), 5)) return;
+
+    // Pick a random template not already active
+    const usedNames = activeConstellations.map(function(c) { return c.name; });
+    const available = CONSTELLATION_TEMPLATES.filter(function(t) { return usedNames.indexOf(t.name) === -1; });
+    if (available.length === 0) return;
+
+    const template = available[Math.floor(Math.random() * available.length)];
+
+    // Place in a random area of the screen
+    const padding = 100;
+    const size = 120 + constellationCount * 15; // grows with upgrades
+    const areaX = padding + Math.random() * (canvas.width - padding * 2 - size);
+    const areaY = padding + Math.random() * (canvas.height - padding * 2 - size);
+
+    const placedStars = template.stars.map(function(s) {
+      return {
+        x: areaX + s.x * size,
+        y: areaY + s.y * size,
+        traced: false,
+      };
+    });
+
+    activeConstellations.push({
+      name: template.name,
+      stars: placedStars,
+      edges: template.edges.map(function(e) { return { from: e[0], to: e[1], traced: false }; }),
+      life: 1.0,
+      completed: false,
+      completedTime: 0,
+      sparklePhase: 0,
+    });
+  }
+
+  function checkConstellationSpawn() {
+    if (getUpgradeCount('constellation') === 0) return;
+    if (getUpgradeCount('star') === 0) return; // need stars first
+    if (Date.now() < nextConstellationTime) return;
+    spawnConstellation();
+    const constellationCount = getUpgradeCount('constellation');
+    const interval = Math.max(8000, 20000 - constellationCount * 1500);
+    nextConstellationTime = Date.now() + interval + Math.random() * interval * 0.5;
+  }
+
+  function updateConstellations() {
+    for (let i = activeConstellations.length - 1; i >= 0; i--) {
+      const c = activeConstellations[i];
+      if (c.completed) {
+        c.completedTime++;
+        c.sparklePhase += 0.1;
+        c.life -= 0.008; // fade out over ~2 seconds
+        if (c.life <= 0) {
+          activeConstellations.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  function drawConstellations() {
+    if (getUpgradeCount('constellation') === 0) return;
+
+    for (const c of activeConstellations) {
+      const alpha = Math.min(c.life, 1.0);
+      if (alpha <= 0) continue;
+
+      // Draw edges
+      for (const edge of c.edges) {
+        const s1 = c.stars[edge.from];
+        const s2 = c.stars[edge.to];
+        ctx.beginPath();
+        ctx.moveTo(s1.x, s1.y);
+        ctx.lineTo(s2.x, s2.y);
+        if (edge.traced || c.completed) {
+          ctx.strokeStyle = 'rgba(200, 220, 255, ' + (alpha * 0.6) + ')';
+          ctx.lineWidth = 1.5;
+        } else {
+          ctx.strokeStyle = 'rgba(255, 255, 255, ' + (alpha * 0.08) + ')';
+          ctx.lineWidth = 0.5;
+        }
+        ctx.stroke();
+      }
+
+      // Draw stars of the constellation (brighter than background)
+      for (let si = 0; si < c.stars.length; si++) {
+        const s = c.stars[si];
+        const starAlpha = (s.traced || c.completed) ? alpha * 0.9 : alpha * 0.4;
+        const starSize = (s.traced || c.completed) ? 2.5 : 1.8;
+
+        // Sparkle effect when completed
+        if (c.completed) {
+          const sparkle = 0.5 + 0.5 * Math.sin(c.sparklePhase + si * 1.3);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, starSize + sparkle * 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(200, 220, 255, ' + (alpha * sparkle * 0.3) + ')';
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, starSize, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, ' + starAlpha + ')';
+        ctx.fill();
+      }
+
+      // Show name when completed
+      if (c.completed) {
+        const cx = c.stars.reduce(function(sum, s) { return sum + s.x; }, 0) / c.stars.length;
+        const cy = c.stars.reduce(function(sum, s) { return sum + s.y; }, 0) / c.stars.length;
+        ctx.save();
+        ctx.font = '12px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(200, 220, 255, ' + (alpha * 0.7) + ')';
+        ctx.fillText(c.name, cx, cy - 15);
+        ctx.restore();
+      }
+    }
+
+    // Draw current drag path
+    if (constellationDragActive && constellationDragPath.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(constellationDragPath[0].x, constellationDragPath[0].y);
+      for (let i = 1; i < constellationDragPath.length; i++) {
+        ctx.lineTo(constellationDragPath[i].x, constellationDragPath[i].y);
+      }
+      ctx.strokeStyle = 'rgba(200, 220, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  function startConstellationDrag(x, y) {
+    if (getUpgradeCount('constellation') === 0) return;
+    // Check if starting near a constellation star
+    for (const c of activeConstellations) {
+      if (c.completed) continue;
+      for (let si = 0; si < c.stars.length; si++) {
+        const s = c.stars[si];
+        const dx = x - s.x;
+        const dy = y - s.y;
+        if (Math.sqrt(dx * dx + dy * dy) < 25) {
+          constellationDragActive = true;
+          constellationDragPath = [{ x: x, y: y, starIdx: si, constellation: c }];
+          constellationTracedEdges = [];
+          s.traced = true;
+          return;
+        }
+      }
+    }
+  }
+
+  function moveConstellationDrag(x, y) {
+    if (!constellationDragActive || constellationDragPath.length === 0) return;
+    constellationDragPath.push({ x: x, y: y });
+
+    const firstPoint = constellationDragPath[0];
+    const c = firstPoint.constellation;
+    if (c.completed) { endConstellationDrag(); return; }
+
+    // Check if we're near a star in the same constellation
+    for (let si = 0; si < c.stars.length; si++) {
+      const s = c.stars[si];
+      const dx = x - s.x;
+      const dy = y - s.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 25) {
+        s.traced = true;
+
+        // Check if this traces an edge from any previously traced star
+        for (const edge of c.edges) {
+          if (edge.traced) continue;
+          // Find if this edge connects the new star to any traced star
+          const otherIdx = (edge.from === si) ? edge.to : ((edge.to === si) ? edge.from : -1);
+          if (otherIdx >= 0 && c.stars[otherIdx].traced) {
+            edge.traced = true;
+          }
+        }
+
+        // Check completion: are all edges traced?
+        const allTraced = c.edges.every(function(e) { return e.traced; });
+        if (allTraced) {
+          c.completed = true;
+          // Reward lumens
+          const constellationCount = getUpgradeCount('constellation');
+          const bonus = Math.max(100, Math.floor(state.totalLumens * (0.01 + constellationCount * 0.005)));
+          state.lumens += bonus;
+          state.totalLumens += bonus;
+          checkMilestones();
+          updateUI();
+
+          // Visual reward
+          const cx = c.stars.reduce(function(sum, s) { return sum + s.x; }, 0) / c.stars.length;
+          const cy = c.stars.reduce(function(sum, s) { return sum + s.y; }, 0) / c.stars.length;
+          halos.push({
+            type: 'glow',
+            x: cx, y: cy,
+            maxRadius: 80,
+            opacity: 0.6,
+            life: 1.0,
+            decay: 0.01,
+            delay: 0,
+          });
+        }
+      }
+    }
+  }
+
+  function endConstellationDrag() {
+    constellationDragActive = false;
+    constellationDragPath = [];
+    constellationTracedEdges = [];
+  }
+
+  // --- Pulsar spinning star system (upgrade #11) ---
+  let mouseX = 0;
+  let mouseY = 0;
+  let pulsarAngle = 0;
+
+  function updatePulsar() {
+    const pulsarCount = getUpgradeCount('pulsar');
+    if (pulsarCount === 0) return;
+    // Very fast rotation: ~6 full spins per second (base) + more with upgrades
+    pulsarAngle += 0.15 + pulsarCount * 0.02;
+  }
+
+  function drawPulsar() {
+    const pulsarCount = getUpgradeCount('pulsar');
+    if (pulsarCount === 0) return;
+
+    const orbitCount = Math.min(1 + Math.floor(pulsarCount / 3), 4);
+    const orbitRadius = 30 + pulsarCount * 2;
+
+    for (let i = 0; i < orbitCount; i++) {
+      const angleOffset = (i / orbitCount) * Math.PI * 2;
+      const angle = pulsarAngle + angleOffset;
+      const px = mouseX + Math.cos(angle) * orbitRadius;
+      const py = mouseY + Math.sin(angle) * orbitRadius;
+
+      // Draw orbiting star with a small trail
+      const trailCount = 5;
+      for (let t = trailCount; t >= 0; t--) {
+        const trailAngle = angle - t * 0.12;
+        const tx = mouseX + Math.cos(trailAngle) * orbitRadius;
+        const ty = mouseY + Math.sin(trailAngle) * orbitRadius;
+        const trailAlpha = (1 - t / trailCount) * 0.6;
+        const trailSize = (1 - t / trailCount) * 3;
+
+        ctx.beginPath();
+        ctx.arc(tx, ty, trailSize, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(200, 220, 255, ' + trailAlpha + ')';
+        ctx.fill();
+      }
+
+      // Main star
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fill();
+
+      // Star glow
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, 12);
+      glow.addColorStop(0, 'rgba(200, 220, 255, 0.4)');
+      glow.addColorStop(1, 'rgba(200, 220, 255, 0)');
+      ctx.beginPath();
+      ctx.arc(px, py, 12, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+
+      // Draw 4-pointed star shape
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle * 2); // spin the star shape
+      ctx.beginPath();
+      const spikes = 4;
+      const outerR = 5 + pulsarCount * 0.3;
+      const innerR = 1.5;
+      for (let s = 0; s < spikes * 2; s++) {
+        const r = s % 2 === 0 ? outerR : innerR;
+        const a = (s / (spikes * 2)) * Math.PI * 2;
+        if (s === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+        else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // --- Big Bang effect system (upgrade #20) ---
+  let bigBangActive = false;
+  let bigBangPhase = 0; // 0=idle, 1=implosion, 2=explosion
+  let bigBangProgress = 0;
+  let bigBangParticles = [];
+  let nextBigBangTime = Date.now() + 30000 + Math.random() * 30000;
+
+  function checkBigBangSpawn() {
+    const bbCount = getUpgradeCount('bigbang');
+    if (bbCount === 0) return;
+    if (bigBangActive) return;
+    if (state.victoryReached || state.sunPurchased) return;
+    if (Date.now() < nextBigBangTime) return;
+
+    startBigBang();
+    // Interval: 25-60 seconds, faster with more upgrades
+    const interval = Math.max(15000, 40000 - bbCount * 3000);
+    nextBigBangTime = Date.now() + interval + Math.random() * interval * 0.5;
+  }
+
+  function startBigBang() {
+    bigBangActive = true;
+    bigBangPhase = 1; // implosion
+    bigBangProgress = 0;
+    bigBangParticles = [];
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    // Collect existing visible light (halos that are glows/persists)
+    let hasLight = false;
+    for (const h of halos) {
+      if ((h.type === 'glow' || h.type === 'persist') && h.life > 0.1) {
+        hasLight = true;
+        bigBangParticles.push({
+          x: h.x, y: h.y,
+          originX: h.x, originY: h.y,
+          targetX: cx, targetY: cy,
+          size: 2 + Math.random() * 4,
+          alpha: 0.5 + Math.random() * 0.5,
+          phase: 0, // 0-1 for implosion, then 0-1 for explosion
+          explosionAngle: Math.random() * Math.PI * 2,
+          explosionDist: 100 + Math.random() * Math.max(canvas.width, canvas.height) * 0.7,
+        });
+      }
+    }
+
+    // Collect light bursts
+    for (const b of lightBursts) {
+      hasLight = true;
+      bigBangParticles.push({
+        x: b.x, y: b.y,
+        originX: b.x, originY: b.y,
+        targetX: cx, targetY: cy,
+        size: 3 + Math.random() * 5,
+        alpha: 0.6 + Math.random() * 0.4,
+        phase: 0,
+        explosionAngle: Math.random() * Math.PI * 2,
+        explosionDist: 100 + Math.random() * Math.max(canvas.width, canvas.height) * 0.7,
+      });
+    }
+
+    // Collect background stars
+    for (const s of bgStars) {
+      bigBangParticles.push({
+        x: s.x, y: s.y,
+        originX: s.x, originY: s.y,
+        targetX: cx, targetY: cy,
+        size: s.size + 1,
+        alpha: 0.3 + Math.random() * 0.5,
+        phase: 0,
+        explosionAngle: Math.random() * Math.PI * 2,
+        explosionDist: 80 + Math.random() * Math.max(canvas.width, canvas.height) * 0.6,
+      });
+    }
+
+    // If not much light, create particles from edges
+    if (!hasLight || bigBangParticles.length < 20) {
+      const edgeCount = 40;
+      for (let i = 0; i < edgeCount; i++) {
+        let ex, ey;
+        const side = Math.floor(Math.random() * 4);
+        if (side === 0) { ex = Math.random() * canvas.width; ey = -5; }
+        else if (side === 1) { ex = canvas.width + 5; ey = Math.random() * canvas.height; }
+        else if (side === 2) { ex = Math.random() * canvas.width; ey = canvas.height + 5; }
+        else { ex = -5; ey = Math.random() * canvas.height; }
+        bigBangParticles.push({
+          x: ex, y: ey,
+          originX: ex, originY: ey,
+          targetX: cx, targetY: cy,
+          size: 1 + Math.random() * 3,
+          alpha: 0.3 + Math.random() * 0.5,
+          phase: 0,
+          explosionAngle: Math.random() * Math.PI * 2,
+          explosionDist: 100 + Math.random() * Math.max(canvas.width, canvas.height) * 0.7,
+        });
+      }
+    }
+  }
+
+  function updateBigBang() {
+    if (!bigBangActive) return;
+
+    bigBangProgress += 0.012;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    if (bigBangPhase === 1) {
+      // Implosion: all particles converge to center
+      for (const p of bigBangParticles) {
+        p.phase = Math.min(bigBangProgress / 0.5, 1);
+        const t = easeOutCubic(p.phase);
+        p.x = p.originX + (p.targetX - p.originX) * t;
+        p.y = p.originY + (p.targetY - p.originY) * t;
+        p.size *= 0.998; // shrink slightly
+      }
+
+      if (bigBangProgress >= 0.5) {
+        bigBangPhase = 2;
+        bigBangProgress = 0.5;
+        // Reset phase for explosion
+        for (const p of bigBangParticles) {
+          p.phase = 0;
+          p.originX = cx;
+          p.originY = cy;
+          p.x = cx;
+          p.y = cy;
+          p.size = 2 + Math.random() * 5;
+          p.alpha = 0.7 + Math.random() * 0.3;
+        }
+      }
+    } else if (bigBangPhase === 2) {
+      // Explosion: all particles fly outward from center
+      const explodeProgress = (bigBangProgress - 0.5) / 0.5;
+      for (const p of bigBangParticles) {
+        p.phase = Math.min(explodeProgress, 1);
+        const t = easeOutCubic(p.phase);
+        p.x = cx + Math.cos(p.explosionAngle) * p.explosionDist * t;
+        p.y = cy + Math.sin(p.explosionAngle) * p.explosionDist * t;
+        p.alpha = (1 - p.phase) * 0.8;
+        p.size = (2 + Math.random() * 3) * (1 - p.phase * 0.5);
+      }
+
+      if (bigBangProgress >= 1.0) {
+        bigBangActive = false;
+        bigBangPhase = 0;
+        bigBangParticles = [];
+      }
+    }
+  }
+
+  function drawBigBang() {
+    if (!bigBangActive) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    // Draw particles
+    for (const p of bigBangParticles) {
+      if (p.alpha <= 0) continue;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(p.size, 0.5), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + Math.max(p.alpha, 0) + ')';
+      ctx.fill();
+    }
+
+    // Central glow during implosion/explosion
+    if (bigBangPhase === 1) {
+      const intensity = bigBangProgress / 0.5;
+      const r = 20 + intensity * 40;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, 'rgba(255, 255, 255, ' + (intensity * 0.8) + ')');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    } else if (bigBangPhase === 2) {
+      const explodeProgress = (bigBangProgress - 0.5) / 0.5;
+      const intensity = 1 - explodeProgress;
+      // Big flash at the beginning of explosion
+      const flashR = 50 + explodeProgress * 200;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashR);
+      grad.addColorStop(0, 'rgba(255, 255, 240, ' + (intensity * 0.9) + ')');
+      grad.addColorStop(0.3, 'rgba(255, 255, 220, ' + (intensity * 0.4) + ')');
+      grad.addColorStop(1, 'rgba(255, 255, 200, 0)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, flashR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Shockwave ring
+      if (explodeProgress < 0.6) {
+        const ringR = explodeProgress * Math.max(canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, ' + ((1 - explodeProgress / 0.6) * 0.4) + ')';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+    }
+  }
+
   // --- Canvas setup ---
   const halos = [];
 
@@ -376,8 +930,6 @@
   }
 
   function drawHalos() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     for (const h of halos) {
       if (h.delay > 0) continue;
 
@@ -560,25 +1112,32 @@
     if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#switch-container')) return;
     startRub(e.clientX, e.clientY);
     startPrismHold(e.clientX, e.clientY);
+    startConstellationDrag(e.clientX, e.clientY);
   });
   gameArea.addEventListener('mousemove', function (e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
     if (e.target.closest('#upgrade-panel')) return;
     moveRub(e.clientX, e.clientY);
     movePrismHold(e.clientX, e.clientY);
+    moveConstellationDrag(e.clientX, e.clientY);
   });
-  gameArea.addEventListener('mouseup', function () { endRub(); endPrismHold(); });
-  gameArea.addEventListener('mouseleave', function () { endRub(); endPrismHold(); });
+  gameArea.addEventListener('mouseup', function () { endRub(); endPrismHold(); endConstellationDrag(); });
+  gameArea.addEventListener('mouseleave', function () { endRub(); endPrismHold(); endConstellationDrag(); });
 
   gameArea.addEventListener('touchmove', function (e) {
     if (e.target.closest('#upgrade-panel')) return;
     e.preventDefault();
     const touch = e.touches[0];
+    mouseX = touch.clientX;
+    mouseY = touch.clientY;
     moveRub(touch.clientX, touch.clientY);
     movePrismHold(touch.clientX, touch.clientY);
+    moveConstellationDrag(touch.clientX, touch.clientY);
   }, { passive: false });
 
-  gameArea.addEventListener('touchend', function () { endRub(); endPrismHold(); });
-  gameArea.addEventListener('touchcancel', function () { endRub(); endPrismHold(); });
+  gameArea.addEventListener('touchend', function () { endRub(); endPrismHold(); endConstellationDrag(); });
+  gameArea.addEventListener('touchcancel', function () { endRub(); endPrismHold(); endConstellationDrag(); });
 
   // --- Combo system ---
   let comboCount = 0;
@@ -687,8 +1246,11 @@
     if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#victory-screen') || e.target.closest('#switch-container')) return;
     e.preventDefault();
     const touch = e.touches[0];
+    mouseX = touch.clientX;
+    mouseY = touch.clientY;
     startRub(touch.clientX, touch.clientY);
     startPrismHold(touch.clientX, touch.clientY);
+    startConstellationDrag(touch.clientX, touch.clientY);
     handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target });
   }, { passive: false });
 
@@ -725,6 +1287,9 @@
 
     pendingReward = true;
     recalcPassive();
+    if (upgrade.id === 'star' || upgrade.id === 'constellation') {
+      regenerateStars();
+    }
     renderUpgrades();
     updateUI();
 
@@ -851,6 +1416,12 @@
     lightBursts.length = 0;
     prismRays.length = 0;
     lightningBolts.length = 0;
+    bgStars.length = 0;
+    lastStarCount = 0;
+    activeConstellations.length = 0;
+    bigBangActive = false;
+    bigBangPhase = 0;
+    bigBangParticles = [];
 
     // Create cinematic canvas
     const cinCanvas = document.createElement('canvas');
@@ -1001,6 +1572,12 @@
     lightBursts.length = 0;
     prismRays.length = 0;
     lightningBolts.length = 0;
+    bgStars.length = 0;
+    lastStarCount = 0;
+    activeConstellations.length = 0;
+    bigBangActive = false;
+    bigBangPhase = 0;
+    bigBangParticles = [];
     prismHolding = false;
     comboCount = 0;
     updateUI();
@@ -1030,10 +1607,48 @@
     lightBursts.length = 0;
     prismRays.length = 0;
     lightningBolts.length = 0;
+    bgStars.length = 0;
+    lastStarCount = 0;
+    activeConstellations.length = 0;
+    bigBangActive = false;
+    bigBangPhase = 0;
+    bigBangParticles = [];
     prismHolding = false;
     comboCount = 0;
     updateUI();
     renderUpgrades();
+  });
+
+  // --- DEV button: Ready for Sun ---
+  const devBtn = document.getElementById('dev-btn');
+  devBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    // Max out all upgrades except sun
+    for (const up of UPGRADES) {
+      if (up.type === 'victory') continue;
+      state.upgrades[up.id] = up.maxCount;
+      if (up.type === 'click') {
+        // Recalculate click power
+      }
+    }
+    // Recalculate click power from scratch
+    let cp = 1;
+    for (const up of UPGRADES) {
+      if (up.type === 'click') {
+        cp += up.value * getUpgradeCount(up.id);
+      }
+    }
+    state.clickPower = cp;
+    // Give enough lumens to buy the sun
+    state.lumens = 1200000000000; // 1.2T
+    state.totalLumens = 1200000000000;
+    recalcPassive();
+    upgradeUnlocked = true;
+    upgradeToggle.classList.remove('hidden');
+    regenerateStars();
+    renderUpgrades();
+    updateUI();
+    save();
   });
 
   // --- Upgrade panel toggle ---
@@ -1820,6 +2435,7 @@
 
       recalcPassive();
       checkMilestones();
+      regenerateStars();
       updateUI();
       renderUpgrades();
 
@@ -1845,16 +2461,31 @@
 
   // --- Game loop ---
   function gameLoop() {
+    // Update systems
+    regenerateStars();
+    updateStars();
+    updatePulsar();
+    updateConstellations();
+    checkConstellationSpawn();
+    updateBigBang();
+    checkBigBangSpawn();
     updateHalos();
     updateLightBursts();
     updatePrismRays();
     updateLightningBolts();
     checkBurstSpawn();
     checkRaySpawn();
+
+    // Clear canvas then draw (back to front)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawStars();
+    drawConstellations();
     drawHalos();
+    drawBigBang();
     drawLightningBolts();
     drawPrismRays();
     drawLightBursts();
+    drawPulsar();
     requestAnimationFrame(gameLoop);
   }
 
