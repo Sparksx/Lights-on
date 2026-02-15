@@ -32,6 +32,13 @@
   <div id="game-area" class="hidden">
     <canvas id="halo-canvas"></canvas>
 
+    <!-- INTRO OVERLAY (new game only) -->
+    <div id="intro-overlay" class="hidden">
+      <div id="intro-orb"></div>
+      <div id="intro-text"></div>
+      <div id="intro-plea"></div>
+    </div>
+
     <div id="progress-bar">
       <div id="progress-fill"></div>
     </div>
@@ -49,7 +56,7 @@
         <label id="admin-toggle">
           <input type="checkbox" id="admin-checkbox">
           <span id="admin-slider"></span>
-          <span id="admin-label">Admin</span>
+          <span id="admin-label">Debug (breaks experience)</span>
         </label>
       </div>
     </div>

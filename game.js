@@ -2256,10 +2256,24 @@
       const displayName = getUpgradeName(up);
       const displayDesc = getUpgradeDesc(up);
 
-      const costLabel = isMaxed ? 'MAX' : (adminMode ? 'GRATUIT' : formatNumber(cost) + ' ' + unit);
+      const costLabel = isMaxed ? 'MAX' : (adminMode ? 'FREE' : formatNumber(cost) + ' ' + unit);
+
+      // Compute brief mechanical effect description
+      let effectLabel = '';
+      if (up.type === 'passive') {
+        effectLabel = '+' + formatNumber(up.value) + ' ' + unit + '/s';
+      } else if (up.type === 'click') {
+        effectLabel = '+' + formatNumber(up.value) + ' per click';
+      } else if (up.type === 'burst') {
+        effectLabel = 'Spawns collectible orbs';
+      } else if (up.type === 'victory') {
+        effectLabel = 'Unlock the final switch';
+      }
+
       item.innerHTML = `
         <div class="upgrade-name">${displayName}</div>
         <div class="upgrade-desc">${displayDesc}</div>
+        <div class="upgrade-effect">${effectLabel}</div>
         <div class="upgrade-cost">${costLabel}</div>
         ${count > 0 ? `<div class="upgrade-count">x${count}</div>` : ''}
       `;
@@ -3599,8 +3613,43 @@
     requestAnimationFrame(gameLoop);
   }
 
+  // --- Intro animation (new game only) ---
+  const introOverlay = document.getElementById('intro-overlay');
+  const introText = document.getElementById('intro-text');
+  const introPlea = document.getElementById('intro-plea');
+
+  function showIntro(onDone) {
+    introOverlay.classList.remove('hidden');
+
+    if (gameMode === 'off') {
+      introText.textContent = 'The darkness is fading\u2026';
+      introPlea.textContent = 'Save me\u2026';
+    } else {
+      introText.textContent = 'The light is dying\u2026';
+      introPlea.textContent = 'Save me\u2026';
+    }
+
+    let dismissed = false;
+    function dismissIntro() {
+      if (dismissed) return;
+      dismissed = true;
+      introOverlay.removeEventListener('click', dismissIntro);
+      introOverlay.classList.add('fade-out');
+      setTimeout(function () {
+        introOverlay.classList.add('hidden');
+        introOverlay.classList.remove('fade-out');
+        onDone();
+      }, 800);
+    }
+
+    // Dismiss on click/tap, or auto-dismiss after 5s
+    introOverlay.addEventListener('click', dismissIntro);
+    setTimeout(dismissIntro, 5000);
+  }
+
   // --- Init (called after mode selection) ---
   function initGame() {
+    const isNewGame = !localStorage.getItem(getSaveKey());
     load();
     updateUI();
     gameLoop();
@@ -3611,6 +3660,12 @@
         renderUpgrades();
       }
     }, 500);
+
+    if (isNewGame) {
+      showIntro(function () {
+        // Intro done — game is already running underneath
+      });
+    }
   }
 
 })();
