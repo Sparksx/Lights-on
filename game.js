@@ -15,7 +15,7 @@
   };
 
   // --- Constants ---
-  const VICTORY_LUMENS = 200000;
+  const VICTORY_LUMENS = 1000000000000;
   const SAVE_KEY = 'lights-on-save';
 
   // --- Upgrades Definition ---
@@ -120,15 +120,169 @@
       unlockAt: 60000,
     },
     {
+      id: 'supernova',
+      name: 'Supernova',
+      desc: 'L\'étoile meurt dans un cri de lumière',
+      baseCost: 300000,
+      costMultiplier: 1.65,
+      type: 'passive',
+      value: 2500,
+      maxCount: 10,
+      unlockAt: 180000,
+    },
+    {
+      id: 'pulsar',
+      name: 'Pulsar',
+      desc: 'Un battement de cœur dans le vide',
+      baseCost: 800000,
+      costMultiplier: 2.0,
+      type: 'click',
+      value: 35,
+      maxCount: 12,
+      unlockAt: 450000,
+    },
+    {
+      id: 'nebula',
+      name: 'Nébuleuse',
+      desc: 'Le berceau des soleils à naître',
+      baseCost: 2000000,
+      costMultiplier: 1.6,
+      type: 'passive',
+      value: 8000,
+      maxCount: 10,
+      unlockAt: 1200000,
+    },
+    {
+      id: 'comet',
+      name: 'Comète',
+      desc: 'Une traînée de glace et de feu',
+      baseCost: 5000000,
+      costMultiplier: 1.8,
+      type: 'burst',
+      value: 2,
+      maxCount: 20,
+      unlockAt: 3000000,
+    },
+    {
+      id: 'quasar',
+      name: 'Quasar',
+      desc: 'Plus brillant qu\'un milliard de soleils',
+      baseCost: 15000000,
+      costMultiplier: 1.65,
+      type: 'passive',
+      value: 30000,
+      maxCount: 8,
+      unlockAt: 8000000,
+    },
+    {
+      id: 'plasma',
+      name: 'Plasma',
+      desc: 'Le quatrième état de la matière',
+      baseCost: 40000000,
+      costMultiplier: 2.0,
+      type: 'click',
+      value: 120,
+      maxCount: 10,
+      unlockAt: 20000000,
+    },
+    {
+      id: 'constellation',
+      name: 'Constellation',
+      desc: 'Des histoires écrites dans le ciel',
+      baseCost: 100000000,
+      costMultiplier: 1.6,
+      type: 'passive',
+      value: 100000,
+      maxCount: 8,
+      unlockAt: 55000000,
+    },
+    {
+      id: 'galaxy',
+      name: 'Galaxie',
+      desc: 'Cent milliards d\'étoiles dansent',
+      baseCost: 300000000,
+      costMultiplier: 1.65,
+      type: 'passive',
+      value: 350000,
+      maxCount: 6,
+      unlockAt: 150000000,
+    },
+    {
+      id: 'whitehole',
+      name: 'Trou blanc',
+      desc: 'Ce qui a été avalé est rendu',
+      baseCost: 1000000000,
+      costMultiplier: 1.7,
+      type: 'passive',
+      value: 1200000,
+      maxCount: 6,
+      unlockAt: 500000000,
+    },
+    {
+      id: 'darkmatter',
+      name: 'Matière noire',
+      desc: 'Invisible, elle sculpte l\'univers',
+      baseCost: 3000000000,
+      costMultiplier: 1.7,
+      type: 'passive',
+      value: 4000000,
+      maxCount: 5,
+      unlockAt: 1500000000,
+    },
+    {
+      id: 'bigbang',
+      name: 'Big Bang',
+      desc: 'Que la lumière soit',
+      baseCost: 10000000000,
+      costMultiplier: 1.75,
+      type: 'passive',
+      value: 15000000,
+      maxCount: 5,
+      unlockAt: 5000000000,
+    },
+    {
+      id: 'cosmiclight',
+      name: 'Lumière cosmique',
+      desc: 'L\'écho du premier instant',
+      baseCost: 30000000000,
+      costMultiplier: 1.8,
+      type: 'passive',
+      value: 50000000,
+      maxCount: 4,
+      unlockAt: 15000000000,
+    },
+    {
+      id: 'multiverse',
+      name: 'Multivers',
+      desc: 'Chaque choix, un nouveau soleil',
+      baseCost: 100000000000,
+      costMultiplier: 1.85,
+      type: 'passive',
+      value: 200000000,
+      maxCount: 3,
+      unlockAt: 50000000000,
+    },
+    {
+      id: 'eternity',
+      name: 'Éternité',
+      desc: 'Le temps n\'est plus qu\'une lueur',
+      baseCost: 400000000000,
+      costMultiplier: 1.9,
+      type: 'passive',
+      value: 800000000,
+      maxCount: 3,
+      unlockAt: 180000000000,
+    },
+    {
       id: 'sun',
       name: 'Soleil',
       desc: '?',
-      baseCost: 200000,
+      baseCost: 1000000000000,
       costMultiplier: 1,
       type: 'victory',
       value: 0,
       maxCount: 1,
-      unlockAt: 150000,
+      unlockAt: 500000000000,
     },
   ];
 
@@ -916,7 +1070,9 @@
     const margin = 60;
     const x = margin + Math.random() * (canvas.width - margin * 2);
     const y = margin + Math.random() * (canvas.height - margin * 2);
-    const baseBonus = Math.max(10, Math.floor(state.totalLumens * 0.03));
+    const cometCount = getUpgradeCount('comet');
+    const bonusPercent = 0.03 + cometCount * 0.005;
+    const baseBonus = Math.max(10, Math.floor(state.totalLumens * bonusPercent));
     const bonus = baseBonus + Math.floor(Math.random() * baseBonus);
 
     // Random initial wander direction
@@ -945,10 +1101,15 @@
 
   function checkBurstSpawn() {
     if (state.victoryReached || state.sunPurchased) return;
-    if (getUpgradeCount('firefly') === 0) return;
-    if (Date.now() >= nextBurstTime && lightBursts.length < 3) {
+    const fireflyCount = getUpgradeCount('firefly');
+    const cometCount = getUpgradeCount('comet');
+    if (fireflyCount === 0 && cometCount === 0) return;
+    const maxBursts = 3 + Math.floor(cometCount / 2);
+    const baseInterval = Math.max(5000, 10000 - cometCount * 250);
+    const randomExtra = Math.max(3000, 15000 - cometCount * 500);
+    if (Date.now() >= nextBurstTime && lightBursts.length < maxBursts) {
       spawnLightBurst();
-      nextBurstTime = Date.now() + 10000 + Math.random() * 15000;
+      nextBurstTime = Date.now() + baseInterval + Math.random() * randomExtra;
     }
   }
 
@@ -1675,6 +1836,8 @@
 
   // --- Format numbers ---
   function formatNumber(n) {
+    if (n >= 1000000000000) return (n / 1000000000000).toFixed(1) + 'T';
+    if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
     return Math.floor(n).toString();
