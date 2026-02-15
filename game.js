@@ -466,13 +466,37 @@
   function drawStars() {
     const starCount = getUpgradeCount('star');
     if (starCount === 0) return;
-    for (const s of bgStars) {
-      const twinkle = 0.5 + 0.5 * Math.sin(s.twinklePhase);
-      const alpha = s.baseAlpha * twinkle;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-      ctx.fillStyle = rgba(255, 255, 255, alpha);
-      ctx.fill();
+
+    if (gameMode === 'off') {
+      // OFF MODE: Cendres — dark ash particles drifting, eerie
+      for (const s of bgStars) {
+        const twinkle = 0.5 + 0.5 * Math.sin(s.twinklePhase);
+        const alpha = s.baseAlpha * twinkle * 0.6;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, ' + alpha + ')';
+        ctx.fill();
+        // Tiny dark aura
+        if (s.size > 1) {
+          const aura = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 2.5);
+          aura.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.2) + ')');
+          aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = aura;
+          ctx.fill();
+        }
+      }
+    } else {
+      // ON MODE: Bright twinkling stars
+      for (const s of bgStars) {
+        const twinkle = 0.5 + 0.5 * Math.sin(s.twinklePhase);
+        const alpha = s.baseAlpha * twinkle;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fillStyle = rgba(255, 255, 255, alpha);
+        ctx.fill();
+      }
     }
   }
 
@@ -559,6 +583,8 @@
   function drawConstellations() {
     if (getUpgradeCount('constellation') === 0) return;
 
+    const isOff = gameMode === 'off';
+
     for (const c of activeConstellations) {
       const alpha = Math.min(c.life, 1.0);
       if (alpha <= 0) continue;
@@ -570,46 +596,98 @@
         ctx.beginPath();
         ctx.moveTo(s1.x, s1.y);
         ctx.lineTo(s2.x, s2.y);
-        if (edge.traced || c.completed) {
-          ctx.strokeStyle = rgba(200, 220, 255, alpha * 0.6);
-          ctx.lineWidth = 1.5;
+        if (isOff) {
+          // OFF MODE: Oubli — dark fading lines, like memories dissolving
+          if (edge.traced || c.completed) {
+            ctx.strokeStyle = 'rgba(0, 0, 0, ' + (alpha * 0.5) + ')';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]); // dashed = fragmented memories
+          } else {
+            ctx.strokeStyle = 'rgba(0, 0, 0, ' + (alpha * 0.06) + ')';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([2, 6]);
+          }
         } else {
-          ctx.strokeStyle = rgba(255, 255, 255, alpha * 0.08);
-          ctx.lineWidth = 0.5;
+          if (edge.traced || c.completed) {
+            ctx.strokeStyle = rgba(200, 220, 255, alpha * 0.6);
+            ctx.lineWidth = 1.5;
+          } else {
+            ctx.strokeStyle = rgba(255, 255, 255, alpha * 0.08);
+            ctx.lineWidth = 0.5;
+          }
         }
         ctx.stroke();
+        ctx.setLineDash([]);
       }
 
-      // Draw stars of the constellation (brighter than background)
+      // Draw stars/nodes
       for (let si = 0; si < c.stars.length; si++) {
         const s = c.stars[si];
-        const starAlpha = (s.traced || c.completed) ? alpha * 0.9 : alpha * 0.4;
-        const starSize = (s.traced || c.completed) ? 2.5 : 1.8;
 
-        // Sparkle effect when completed
-        if (c.completed) {
-          const sparkle = 0.5 + 0.5 * Math.sin(c.sparklePhase + si * 1.3);
+        if (isOff) {
+          // OFF MODE: Dark nodes — like holes in the fabric
+          const starAlpha = (s.traced || c.completed) ? alpha * 0.7 : alpha * 0.25;
+          const starSize = (s.traced || c.completed) ? 2.5 : 1.5;
+
+          // Dark dissolution effect when completed
+          if (c.completed) {
+            const dissolve = 0.5 + 0.5 * Math.sin(c.sparklePhase + si * 1.3);
+            const dissolveR = starSize + dissolve * 5;
+            const dGrad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, dissolveR);
+            dGrad.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * dissolve * 0.3) + ')');
+            dGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, dissolveR, 0, Math.PI * 2);
+            ctx.fillStyle = dGrad;
+            ctx.fill();
+          }
+
           ctx.beginPath();
-          ctx.arc(s.x, s.y, starSize + sparkle * 4, 0, Math.PI * 2);
-          ctx.fillStyle = rgba(200, 220, 255, alpha * sparkle * 0.3);
+          ctx.arc(s.x, s.y, starSize, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + starAlpha + ')';
+          ctx.fill();
+        } else {
+          const starAlpha = (s.traced || c.completed) ? alpha * 0.9 : alpha * 0.4;
+          const starSize = (s.traced || c.completed) ? 2.5 : 1.8;
+
+          if (c.completed) {
+            const sparkle = 0.5 + 0.5 * Math.sin(c.sparklePhase + si * 1.3);
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, starSize + sparkle * 4, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(200, 220, 255, alpha * sparkle * 0.3);
+            ctx.fill();
+          }
+
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, starSize, 0, Math.PI * 2);
+          ctx.fillStyle = rgba(255, 255, 255, starAlpha);
           ctx.fill();
         }
-
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, starSize, 0, Math.PI * 2);
-        ctx.fillStyle = rgba(255, 255, 255, starAlpha);
-        ctx.fill();
       }
 
       // Show name when completed
       if (c.completed) {
-        const cx = c.stars.reduce(function(sum, s) { return sum + s.x; }, 0) / c.stars.length;
-        const cy = c.stars.reduce(function(sum, s) { return sum + s.y; }, 0) / c.stars.length;
+        const ccx = c.stars.reduce(function(sum, s) { return sum + s.x; }, 0) / c.stars.length;
+        const ccy = c.stars.reduce(function(sum, s) { return sum + s.y; }, 0) / c.stars.length;
         ctx.save();
         ctx.font = '12px "Courier New", monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = rgba(200, 220, 255, alpha * 0.7);
-        ctx.fillText(c.name, cx, cy - 15);
+        if (isOff) {
+          // OFF MODE: Name fading away with strikethrough effect
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + (alpha * 0.5) + ')';
+          ctx.fillText(c.name, ccx, ccy - 15);
+          // Strikethrough line through the name
+          const textWidth = ctx.measureText(c.name).width;
+          ctx.beginPath();
+          ctx.moveTo(ccx - textWidth / 2, ccy - 12);
+          ctx.lineTo(ccx + textWidth / 2, ccy - 12);
+          ctx.strokeStyle = 'rgba(0, 0, 0, ' + (alpha * 0.3) + ')';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = rgba(200, 220, 255, alpha * 0.7);
+          ctx.fillText(c.name, ccx, ccy - 15);
+        }
         ctx.restore();
       }
     }
@@ -621,7 +699,11 @@
       for (let i = 1; i < constellationDragPath.length; i++) {
         ctx.lineTo(constellationDragPath[i].x, constellationDragPath[i].y);
       }
-      ctx.strokeStyle = rgba(200, 220, 255, 0.3);
+      if (isOff) {
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+      } else {
+        ctx.strokeStyle = rgba(200, 220, 255, 0.3);
+      }
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -688,15 +770,28 @@
           // Visual reward
           const cx = c.stars.reduce(function(sum, s) { return sum + s.x; }, 0) / c.stars.length;
           const cy = c.stars.reduce(function(sum, s) { return sum + s.y; }, 0) / c.stars.length;
-          halos.push({
-            type: 'glow',
-            x: cx, y: cy,
-            maxRadius: 80,
-            opacity: 0.6,
-            life: 1.0,
-            decay: 0.01,
-            delay: 0,
-          });
+          if (gameMode === 'off') {
+            // OFF MODE: Void implodes where the memory was erased
+            halos.push({
+              type: 'void-implode',
+              x: cx, y: cy,
+              maxRadius: 90,
+              opacity: 0.5,
+              life: 1.0,
+              decay: 0.01,
+              delay: 0,
+            });
+          } else {
+            halos.push({
+              type: 'glow',
+              x: cx, y: cy,
+              maxRadius: 80,
+              opacity: 0.6,
+              life: 1.0,
+              decay: 0.01,
+              delay: 0,
+            });
+          }
         }
       }
     }
@@ -727,13 +822,99 @@
     const orbitCount = Math.min(1 + Math.floor(pulsarCount / 3), 4);
     const orbitRadius = 30 + pulsarCount * 2;
 
+    if (gameMode === 'off') {
+      // OFF MODE: Vortex — dark whirlpool that distorts space around cursor
+      // Central dark void at cursor
+      const coreR = 8 + pulsarCount;
+      const coreGrad = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, coreR);
+      coreGrad.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
+      coreGrad.addColorStop(0.6, 'rgba(20, 0, 30, 0.3)');
+      coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, coreR, 0, Math.PI * 2);
+      ctx.fillStyle = coreGrad;
+      ctx.fill();
+
+      // Swirling dark arms (spiral pattern)
+      ctx.save();
+      ctx.translate(mouseX, mouseY);
+      ctx.rotate(-pulsarAngle * 0.7); // reverse rotation for eerie feel
+      const armCount = orbitCount + 2;
+      for (let i = 0; i < armCount; i++) {
+        const baseAngle = (i / armCount) * Math.PI * 2;
+        ctx.beginPath();
+        for (let t = 0; t < 1; t += 0.03) {
+          const spiralR = coreR * 0.5 + t * (orbitRadius * 1.5);
+          const spiralA = baseAngle + t * Math.PI * 2.5; // tighter spiral
+          const sx = Math.cos(spiralA) * spiralR;
+          const sy = Math.sin(spiralA) * spiralR;
+          if (t === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        const armAlpha = 0.3 + pulsarCount * 0.02;
+        ctx.strokeStyle = 'rgba(0, 0, 0, ' + armAlpha + ')';
+        ctx.lineWidth = 1.5 + pulsarCount * 0.15;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Orbiting shadow fragments (dark particles in the vortex)
+      for (let i = 0; i < orbitCount; i++) {
+        const angleOffset = (i / orbitCount) * Math.PI * 2;
+        const angle = -pulsarAngle + angleOffset; // reverse direction
+
+        // Dark trail
+        const trailCount = 7;
+        for (let t = trailCount; t >= 0; t--) {
+          const trailAngle = angle + t * 0.15; // trail follows reverse
+          const tx = mouseX + Math.cos(trailAngle) * orbitRadius;
+          const ty = mouseY + Math.sin(trailAngle) * orbitRadius;
+          const trailAlpha = (1 - t / trailCount) * 0.5;
+          const trailSize = (1 - t / trailCount) * 3;
+
+          ctx.beginPath();
+          ctx.arc(tx, ty, trailSize, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + trailAlpha + ')';
+          ctx.fill();
+        }
+
+        const px = mouseX + Math.cos(angle) * orbitRadius;
+        const py = mouseY + Math.sin(angle) * orbitRadius;
+
+        // Dark fragment core
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fill();
+
+        // Dark purple glow
+        const glow = ctx.createRadialGradient(px, py, 0, px, py, 10);
+        glow.addColorStop(0, 'rgba(40, 0, 60, 0.4)');
+        glow.addColorStop(1, 'rgba(20, 0, 30, 0)');
+        ctx.beginPath();
+        ctx.arc(px, py, 10, 0, Math.PI * 2);
+        ctx.fillStyle = glow;
+        ctx.fill();
+      }
+
+      // Outer distortion ring
+      const distortR = orbitRadius * 1.8;
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, distortR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      return;
+    }
+
+    // ON MODE: Classic bright pulsar orbiting stars
     for (let i = 0; i < orbitCount; i++) {
       const angleOffset = (i / orbitCount) * Math.PI * 2;
       const angle = pulsarAngle + angleOffset;
       const px = mouseX + Math.cos(angle) * orbitRadius;
       const py = mouseY + Math.sin(angle) * orbitRadius;
 
-      // Draw orbiting star with a small trail
       const trailCount = 5;
       for (let t = trailCount; t >= 0; t--) {
         const trailAngle = angle - t * 0.12;
@@ -748,13 +929,11 @@
         ctx.fill();
       }
 
-      // Main star
       ctx.beginPath();
       ctx.arc(px, py, 3, 0, Math.PI * 2);
       ctx.fillStyle = rgba(255, 255, 255, 0.9);
       ctx.fill();
 
-      // Star glow
       const glow = ctx.createRadialGradient(px, py, 0, px, py, 12);
       glow.addColorStop(0, rgba(200, 220, 255, 0.4));
       glow.addColorStop(1, rgba(200, 220, 255, 0));
@@ -763,10 +942,9 @@
       ctx.fillStyle = glow;
       ctx.fill();
 
-      // Draw 4-pointed star shape
       ctx.save();
       ctx.translate(px, py);
-      ctx.rotate(angle * 2); // spin the star shape
+      ctx.rotate(angle * 2);
       ctx.beginPath();
       const spikes = 4;
       const outerR = 5 + pulsarCount * 0.3;
@@ -1334,6 +1512,47 @@
     const intensity = 0.4 + progress * 0.6;
     const scale = 1 + progress * 2;
 
+    if (gameMode === 'off') {
+      // OFF MODE: Void collapse — darkness implodes inward
+      // Dark void pulse that contracts instead of expanding
+      halos.push({
+        type: 'void-collapse',
+        x, y,
+        maxRadius: (80 + 40) * scale,
+        opacity: intensity * 0.7,
+        life: 1.0,
+        decay: 0.025,
+        delay: 0,
+      });
+
+      // Contracting dark rings (start large, shrink to center)
+      for (let i = 0; i < 3; i++) {
+        halos.push({
+          type: 'void-ring',
+          x, y,
+          maxRadius: (100 + i * 50) * scale,
+          opacity: intensity * (0.6 - i * 0.15),
+          life: 1.0,
+          decay: 0.015 + i * 0.003,
+          delay: i * 5,
+        });
+      }
+
+      // Persistent dark stain
+      halos.push({
+        type: 'void-stain',
+        x, y,
+        maxRadius: 35 * scale,
+        opacity: 0.12 + progress * 0.08,
+        life: 1.0,
+        decay: 0.004,
+        delay: 3,
+      });
+
+      return;
+    }
+
+    // ON MODE: Light spreading outward
     // Central flash
     halos.push({
       type: 'glow',
@@ -1462,34 +1681,178 @@
         ctx.strokeStyle = rgba(red, green, blue, alpha);
         ctx.lineWidth = lineWidth;
         ctx.stroke();
+      } else if (h.type === 'void-collapse') {
+        // OFF MODE: Dark void that contracts inward (reverse of glow)
+        const collapseT = h.life; // life goes 1→0, so radius shrinks
+        const r = Math.max(h.maxRadius * collapseT, 1);
+        const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.9) + ')');
+        gradient.addColorStop(0.4, 'rgba(20, 0, 30, ' + (alpha * 0.5) + ')');
+        gradient.addColorStop(0.7, 'rgba(40, 0, 50, ' + (alpha * 0.2) + ')');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      } else if (h.type === 'void-ring') {
+        // OFF MODE: Contracting ring (starts large, shrinks to center)
+        const r = Math.max(h.maxRadius * h.life, 1);
+        const lineWidth = Math.max(0.5, 2 * (1 - h.life));
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(30, 0, 40, ' + alpha + ')';
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      } else if (h.type === 'void-stain') {
+        // OFF MODE: Persistent dark mark on the screen
+        const r = h.maxRadius;
+        const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.5) + ')');
+        gradient.addColorStop(0.5, 'rgba(10, 0, 15, ' + (alpha * 0.2) + ')');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      } else if (h.type === 'void-crack') {
+        // OFF MODE: Dark crack line effect from Fissure
+        if (h.points && h.points.length >= 2) {
+          const crackAlpha = alpha * 0.9;
+          // Dark core
+          ctx.beginPath();
+          ctx.moveTo(h.points[0].x, h.points[0].y);
+          for (let pi = 1; pi < h.points.length; pi++) {
+            ctx.lineTo(h.points[pi].x, h.points[pi].y);
+          }
+          ctx.strokeStyle = 'rgba(0, 0, 0, ' + crackAlpha + ')';
+          ctx.lineWidth = h.crackWidth || 2;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+          // Dark purple glow around crack
+          ctx.beginPath();
+          ctx.moveTo(h.points[0].x, h.points[0].y);
+          for (let pi = 1; pi < h.points.length; pi++) {
+            ctx.lineTo(h.points[pi].x, h.points[pi].y);
+          }
+          ctx.strokeStyle = 'rgba(60, 0, 80, ' + (crackAlpha * 0.4) + ')';
+          ctx.lineWidth = (h.crackWidth || 2) * 5;
+          ctx.stroke();
+          // Outer eerie glow
+          ctx.beginPath();
+          ctx.moveTo(h.points[0].x, h.points[0].y);
+          for (let pi = 1; pi < h.points.length; pi++) {
+            ctx.lineTo(h.points[pi].x, h.points[pi].y);
+          }
+          ctx.strokeStyle = 'rgba(40, 0, 60, ' + (crackAlpha * 0.12) + ')';
+          ctx.lineWidth = (h.crackWidth || 2) * 12;
+          ctx.stroke();
+        }
+      } else if (h.type === 'void-implode') {
+        // OFF MODE: Implosion effect (ring contracts then flash)
+        const r = Math.max(h.maxRadius * h.life, 0);
+        if (r > 1) {
+          const gradient = ctx.createRadialGradient(h.x, h.y, r * 0.8, h.x, h.y, r);
+          gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+          gradient.addColorStop(0.5, 'rgba(20, 0, 30, ' + (alpha * 0.6) + ')');
+          gradient.addColorStop(1, 'rgba(0, 0, 0, ' + (alpha * 0.3) + ')');
+          ctx.beginPath();
+          ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+        }
+        // Inner dark core growing
+        const coreR = h.maxRadius * (1 - h.life) * 0.3;
+        if (coreR > 0.5) {
+          const coreGrad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, coreR);
+          coreGrad.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.8) + ')');
+          coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.beginPath();
+          ctx.arc(h.x, h.y, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = coreGrad;
+          ctx.fill();
+        }
+      } else if (h.type === 'cold-glow') {
+        // OFF MODE: Cold blue-purple glow for combo
+        const r = Math.max(radius, 1);
+        const coldness = h.warmth || 0; // reuse warmth as coldness
+        const rr = Math.floor(30 + coldness * 30);
+        const gg = 0;
+        const bb = Math.floor(60 + coldness * 100);
+        const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
+        gradient.addColorStop(0, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + (alpha * 0.7) + ')');
+        gradient.addColorStop(0.5, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + (alpha * 0.25) + ')');
+        gradient.addColorStop(1, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', 0)');
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      } else if (h.type === 'cold-ring') {
+        // OFF MODE: Cold contracting ring for combo
+        const r = h.maxRadius * h.life; // contracts instead of expanding
+        if (r < 1) continue;
+        const coldness = h.warmth || 0;
+        const rr = Math.floor(30 + coldness * 30);
+        const bb = Math.floor(60 + coldness * 100);
+        const lineWidth = Math.max(0.5, 2.5 * (1 - h.life));
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(' + rr + ', 0, ' + bb + ', ' + alpha + ')';
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      } else if (h.type === 'screen-darken') {
+        // OFF MODE: Screen darkens momentarily (Fissure effect)
+        ctx.fillStyle = 'rgba(0, 0, 0, ' + alpha + ')';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else if (h.type === 'screen-flash') {
         // Gentle full-screen flash for lightning bonus (epilepsy-safe)
         ctx.fillStyle = rgba(255, 255, 255, alpha);
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-      } else if (h.type === 'edge') {
-        // Vignette glow from screen edges
+      } else if (h.type === 'edge-dark') {
+        // OFF MODE: Dark vignette creeping from edges
         const w = canvas.width;
         const ht = canvas.height;
         const thickness = h.maxRadius;
-        // Top
+        const topG = ctx.createLinearGradient(0, 0, 0, thickness);
+        topG.addColorStop(0, 'rgba(0, 0, 0, ' + alpha + ')');
+        topG.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = topG;
+        ctx.fillRect(0, 0, w, thickness);
+        const botG = ctx.createLinearGradient(0, ht, 0, ht - thickness);
+        botG.addColorStop(0, 'rgba(0, 0, 0, ' + alpha + ')');
+        botG.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = botG;
+        ctx.fillRect(0, ht - thickness, w, thickness);
+        const leftG = ctx.createLinearGradient(0, 0, thickness, 0);
+        leftG.addColorStop(0, 'rgba(0, 0, 0, ' + alpha + ')');
+        leftG.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = leftG;
+        ctx.fillRect(0, 0, thickness, ht);
+        const rightG = ctx.createLinearGradient(w, 0, w - thickness, 0);
+        rightG.addColorStop(0, 'rgba(0, 0, 0, ' + alpha + ')');
+        rightG.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = rightG;
+        ctx.fillRect(w - thickness, 0, thickness, ht);
+      } else if (h.type === 'edge') {
+        // ON MODE: Vignette glow from screen edges
+        const w = canvas.width;
+        const ht = canvas.height;
+        const thickness = h.maxRadius;
         const topG = ctx.createLinearGradient(0, 0, 0, thickness);
         topG.addColorStop(0, rgba(255, 255, 255, alpha));
         topG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = topG;
         ctx.fillRect(0, 0, w, thickness);
-        // Bottom
         const botG = ctx.createLinearGradient(0, ht, 0, ht - thickness);
         botG.addColorStop(0, rgba(255, 255, 255, alpha));
         botG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = botG;
         ctx.fillRect(0, ht - thickness, w, thickness);
-        // Left
         const leftG = ctx.createLinearGradient(0, 0, thickness, 0);
         leftG.addColorStop(0, rgba(255, 255, 255, alpha));
         leftG.addColorStop(1, rgba(255, 255, 255, 0));
         ctx.fillStyle = leftG;
         ctx.fillRect(0, 0, thickness, ht);
-        // Right
         const rightG = ctx.createLinearGradient(w, 0, w - thickness, 0);
         rightG.addColorStop(0, rgba(255, 255, 255, alpha));
         rightG.addColorStop(1, rgba(255, 255, 255, 0));
@@ -1501,15 +1864,28 @@
 
   // --- Edge glow (upgrade reward) ---
   function addEdgeGlow() {
-    halos.push({
-      type: 'edge',
-      x: 0, y: 0,
-      maxRadius: 100,
-      opacity: 0.10,
-      life: 1.0,
-      decay: 0.008,
-      delay: 0,
-    });
+    if (gameMode === 'off') {
+      // OFF MODE: Dark vignette creeping in from edges
+      halos.push({
+        type: 'edge-dark',
+        x: 0, y: 0,
+        maxRadius: 120,
+        opacity: 0.12,
+        life: 1.0,
+        decay: 0.008,
+        delay: 0,
+      });
+    } else {
+      halos.push({
+        type: 'edge',
+        x: 0, y: 0,
+        maxRadius: 100,
+        opacity: 0.10,
+        life: 1.0,
+        decay: 0.008,
+        delay: 0,
+      });
+    }
   }
 
   // --- Rubbing/swiping mechanic ---
@@ -1537,14 +1913,27 @@
     lastRubX = x;
     lastRubY = y;
 
-    // Generate small sparks along the rub path
+    // Generate particles along the rub path
     if (rubDistance >= RUB_THRESHOLD) {
       const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3));
       state.lumens += rubPower;
       state.totalLumens += rubPower;
       rubDistance -= RUB_THRESHOLD;
 
-      // Small spark particle
+      if (gameMode === 'off') {
+        // OFF MODE: Shadow wisps — dark smoke trails
+        halos.push({
+          type: 'void-stain',
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 10,
+          maxRadius: 10 + Math.random() * 15,
+          opacity: 0.25 + Math.random() * 0.2,
+          life: 1.0,
+          decay: 0.04,
+          delay: 0,
+        });
+      } else {
+      // ON MODE: Small spark particle
       halos.push({
         type: 'glow',
         x, y,
@@ -1554,6 +1943,7 @@
         decay: 0.06,
         delay: 0,
       });
+      }
 
       checkMilestones();
       updateUI();
@@ -1613,30 +2003,55 @@
   }
 
   function showComboGlow(x, y, multiplier) {
-    // Warm light glow indicating combo multiplier (no text)
     const glowSize = 30 + multiplier * 20;
-    const warmth = Math.min(multiplier / 5, 1); // 0-1 warmth factor
-    halos.push({
-      type: 'combo-glow',
-      x, y,
-      maxRadius: glowSize,
-      opacity: 0.3 + multiplier * 0.1,
-      life: 1.0,
-      decay: 0.015,
-      delay: 0,
-      warmth: warmth,
-    });
-    // Expanding warm ring
-    halos.push({
-      type: 'combo-ring',
-      x, y,
-      maxRadius: glowSize * 2,
-      opacity: 0.2 + multiplier * 0.08,
-      life: 1.0,
-      decay: 0.02,
-      delay: 0,
-      warmth: warmth,
-    });
+    const warmth = Math.min(multiplier / 5, 1); // 0-1 factor
+
+    if (gameMode === 'off') {
+      // OFF MODE: Cold void glow — dark purple pulsing
+      halos.push({
+        type: 'cold-glow',
+        x, y,
+        maxRadius: glowSize,
+        opacity: 0.35 + multiplier * 0.12,
+        life: 1.0,
+        decay: 0.015,
+        delay: 0,
+        warmth: warmth,
+      });
+      // Contracting cold ring
+      halos.push({
+        type: 'cold-ring',
+        x, y,
+        maxRadius: glowSize * 2.5,
+        opacity: 0.25 + multiplier * 0.1,
+        life: 1.0,
+        decay: 0.02,
+        delay: 0,
+        warmth: warmth,
+      });
+    } else {
+      // ON MODE: Warm golden glow
+      halos.push({
+        type: 'combo-glow',
+        x, y,
+        maxRadius: glowSize,
+        opacity: 0.3 + multiplier * 0.1,
+        life: 1.0,
+        decay: 0.015,
+        delay: 0,
+        warmth: warmth,
+      });
+      halos.push({
+        type: 'combo-ring',
+        x, y,
+        maxRadius: glowSize * 2,
+        opacity: 0.2 + multiplier * 0.08,
+        life: 1.0,
+        decay: 0.02,
+        delay: 0,
+        warmth: warmth,
+      });
+    }
   }
 
   // --- Click handler ---
@@ -1672,27 +2087,49 @@
       showComboGlow(x, y, multiplier);
     }
 
-    // Lightning: stormy bolt animation + flash
+    // Lightning/Fissure: bolt animation + flash/darken
     const lightningCount = getUpgradeCount('lightning');
     if (lightningCount > 0) {
-      const hasFlash = halos.some(function (h) { return h.type === 'screen-flash' && h.life > 0.5; });
-      if (!hasFlash) {
-        // Screen flash (epilepsy-safe intensity)
-        const flashIntensity = Math.min(0.04 + lightningCount * 0.008, 0.12);
-        halos.push({
-          type: 'screen-flash',
-          x: 0, y: 0,
-          maxRadius: 0,
-          opacity: flashIntensity,
-          life: 1.0,
-          decay: 0.04,
-          delay: 0,
-        });
+      if (gameMode === 'off') {
+        // OFF MODE: Fissure — dark cracks in reality + screen darkens
+        const hasFlash = halos.some(function (h) { return h.type === 'screen-darken' && h.life > 0.5; });
+        if (!hasFlash) {
+          const darkenIntensity = Math.min(0.06 + lightningCount * 0.01, 0.15);
+          halos.push({
+            type: 'screen-darken',
+            x: 0, y: 0,
+            maxRadius: 0,
+            opacity: darkenIntensity,
+            life: 1.0,
+            decay: 0.03,
+            delay: 0,
+          });
 
-        // Generate lightning bolt(s) from click point
-        const boltCount = Math.min(1 + Math.floor(lightningCount / 4), 3);
-        for (let bolt = 0; bolt < boltCount; bolt++) {
-          spawnLightningBolt(x, y, lightningCount, bolt * 3);
+          // Spawn dark cracks instead of lightning bolts
+          const crackCount = Math.min(1 + Math.floor(lightningCount / 3), 4);
+          for (let c = 0; c < crackCount; c++) {
+            spawnFissureCrack(x, y, lightningCount, c * 2);
+          }
+        }
+      } else {
+        // ON MODE: Lightning bolts + screen flash
+        const hasFlash = halos.some(function (h) { return h.type === 'screen-flash' && h.life > 0.5; });
+        if (!hasFlash) {
+          const flashIntensity = Math.min(0.04 + lightningCount * 0.008, 0.12);
+          halos.push({
+            type: 'screen-flash',
+            x: 0, y: 0,
+            maxRadius: 0,
+            opacity: flashIntensity,
+            life: 1.0,
+            decay: 0.04,
+            delay: 0,
+          });
+
+          const boltCount = Math.min(1 + Math.floor(lightningCount / 4), 3);
+          for (let bolt = 0; bolt < boltCount; bolt++) {
+            spawnLightningBolt(x, y, lightningCount, bolt * 3);
+          }
         }
       }
     }
@@ -2241,25 +2678,61 @@
       const twinkleScale = 1 + twinkleIntensity * 0.4;
       const r = b.radius * pulseScale * twinkleScale;
 
-      // Warm firefly glow (slight yellow-green tint)
-      // Outer glow — warm halo
-      const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 2.5);
-      gradient.addColorStop(0, rgba(255, 255, 220, alpha * 0.4));
-      gradient.addColorStop(0.4, rgba(255, 255, 220, alpha * 0.12));
-      gradient.addColorStop(1, rgba(255, 255, 220, 0));
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, r * 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.fill();
+      if (gameMode === 'off') {
+        // OFF MODE: Dark shadow entities — eerie, unsettling presence
+        // Outer dark aura (cold, menacing)
+        const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 3);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.5) + ')');
+        gradient.addColorStop(0.3, 'rgba(20, 0, 35, ' + (alpha * 0.25) + ')');
+        gradient.addColorStop(0.6, 'rgba(40, 0, 50, ' + (alpha * 0.08) + ')');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r * 3, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
 
-      // Core — bright center
-      const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 0.7);
-      core.addColorStop(0, rgba(255, 255, 240, alpha * 0.9));
-      core.addColorStop(1, rgba(255, 255, 240, alpha * 0.15));
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, r * 0.7, 0, Math.PI * 2);
-      ctx.fillStyle = core;
-      ctx.fill();
+        // Core — dark void center
+        const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 0.8);
+        core.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.85) + ')');
+        core.addColorStop(0.6, 'rgba(15, 0, 25, ' + (alpha * 0.5) + ')');
+        core.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = core;
+        ctx.fill();
+
+        // Twinkle: brief dark purple flash (like a shadow flickering)
+        if (twinkleIntensity > 0.1) {
+          const flashR = r * 1.5 * twinkleIntensity;
+          const flash = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, flashR);
+          flash.addColorStop(0, 'rgba(60, 0, 80, ' + (twinkleIntensity * alpha * 0.6) + ')');
+          flash.addColorStop(1, 'rgba(30, 0, 50, 0)');
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, flashR, 0, Math.PI * 2);
+          ctx.fillStyle = flash;
+          ctx.fill();
+        }
+      } else {
+        // ON MODE: Warm firefly glow (slight yellow-green tint)
+        // Outer glow — warm halo
+        const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 2.5);
+        gradient.addColorStop(0, rgba(255, 255, 220, alpha * 0.4));
+        gradient.addColorStop(0.4, rgba(255, 255, 220, alpha * 0.12));
+        gradient.addColorStop(1, rgba(255, 255, 220, 0));
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Core — bright center
+        const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 0.7);
+        core.addColorStop(0, rgba(255, 255, 240, alpha * 0.9));
+        core.addColorStop(1, rgba(255, 255, 240, alpha * 0.15));
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = core;
+        ctx.fill();
+      }
     }
   }
 
@@ -2274,61 +2747,97 @@
         state.lumens += b.bonus;
         state.totalLumens += b.bonus;
 
-        // Light explosion proportional to lumens bonus
-        const explosionScale = Math.min(b.bonus / 100, 5) + 1; // 1-6x scale
+        const explosionScale = Math.min(b.bonus / 100, 5) + 1;
         const explosionIntensity = Math.min(0.6 + explosionScale * 0.15, 1.0);
 
-        // Bright central flash
-        halos.push({
-          type: 'glow',
-          x: b.x, y: b.y,
-          maxRadius: 60 * explosionScale,
-          opacity: explosionIntensity,
-          life: 1.0,
-          decay: 0.015,
-          delay: 0,
-        });
+        if (gameMode === 'off') {
+          // OFF MODE: Implosion — darkness collapses inward, terrifying void
 
-        // Secondary warm glow (lingering)
-        halos.push({
-          type: 'persist',
-          x: b.x, y: b.y,
-          maxRadius: 80 * explosionScale,
-          opacity: explosionIntensity * 0.5,
-          life: 1.0,
-          decay: 0.006,
-          delay: 0,
-        });
-
-        // Expanding light rings proportional to bonus
-        const ringCount = Math.min(2 + Math.floor(explosionScale), 6);
-        for (let r = 0; r < ringCount; r++) {
+          // Void implosion (ring contracts to center)
           halos.push({
-            type: 'ring',
+            type: 'void-implode',
             x: b.x, y: b.y,
-            maxRadius: (60 + r * 35) * explosionScale,
-            opacity: explosionIntensity * (1 - r * 0.12),
+            maxRadius: 80 * explosionScale,
+            opacity: explosionIntensity * 0.8,
             life: 1.0,
-            decay: 0.01 + r * 0.003,
-            delay: r * 4,
+            decay: 0.018,
+            delay: 0,
           });
-        }
 
-        // Radiant light particles bursting outward
-        const particleCount = Math.min(4 + Math.floor(explosionScale * 2), 14);
-        for (let p = 0; p < particleCount; p++) {
-          const angle = (p / particleCount) * Math.PI * 2 + Math.random() * 0.3;
-          const dist = 30 + Math.random() * 50 * explosionScale;
+          // Dark stain left behind
+          halos.push({
+            type: 'void-stain',
+            x: b.x, y: b.y,
+            maxRadius: 50 * explosionScale,
+            opacity: explosionIntensity * 0.4,
+            life: 1.0,
+            decay: 0.005,
+            delay: 0,
+          });
+
+          // Contracting void rings
+          const ringCount = Math.min(2 + Math.floor(explosionScale), 5);
+          for (let r = 0; r < ringCount; r++) {
+            halos.push({
+              type: 'void-ring',
+              x: b.x, y: b.y,
+              maxRadius: (70 + r * 40) * explosionScale,
+              opacity: explosionIntensity * (0.6 - r * 0.1),
+              life: 1.0,
+              decay: 0.012 + r * 0.003,
+              delay: r * 3,
+            });
+          }
+        } else {
+          // ON MODE: Light explosion outward
           halos.push({
             type: 'glow',
-            x: b.x + Math.cos(angle) * dist,
-            y: b.y + Math.sin(angle) * dist,
-            maxRadius: 15 + Math.random() * 20 * explosionScale,
-            opacity: explosionIntensity * (0.4 + Math.random() * 0.3),
+            x: b.x, y: b.y,
+            maxRadius: 60 * explosionScale,
+            opacity: explosionIntensity,
             life: 1.0,
-            decay: 0.02 + Math.random() * 0.015,
-            delay: 2 + Math.floor(Math.random() * 6),
+            decay: 0.015,
+            delay: 0,
           });
+
+          halos.push({
+            type: 'persist',
+            x: b.x, y: b.y,
+            maxRadius: 80 * explosionScale,
+            opacity: explosionIntensity * 0.5,
+            life: 1.0,
+            decay: 0.006,
+            delay: 0,
+          });
+
+          const ringCount = Math.min(2 + Math.floor(explosionScale), 6);
+          for (let r = 0; r < ringCount; r++) {
+            halos.push({
+              type: 'ring',
+              x: b.x, y: b.y,
+              maxRadius: (60 + r * 35) * explosionScale,
+              opacity: explosionIntensity * (1 - r * 0.12),
+              life: 1.0,
+              decay: 0.01 + r * 0.003,
+              delay: r * 4,
+            });
+          }
+
+          const particleCount = Math.min(4 + Math.floor(explosionScale * 2), 14);
+          for (let p = 0; p < particleCount; p++) {
+            const angle = (p / particleCount) * Math.PI * 2 + Math.random() * 0.3;
+            const pdist = 30 + Math.random() * 50 * explosionScale;
+            halos.push({
+              type: 'glow',
+              x: b.x + Math.cos(angle) * pdist,
+              y: b.y + Math.sin(angle) * pdist,
+              maxRadius: 15 + Math.random() * 20 * explosionScale,
+              opacity: explosionIntensity * (0.4 + Math.random() * 0.3),
+              life: 1.0,
+              decay: 0.02 + Math.random() * 0.015,
+              delay: 2 + Math.floor(Math.random() * 6),
+            });
+          }
         }
 
         lightBursts.splice(i, 1);
@@ -2516,126 +3025,221 @@
       const alpha = Math.min(ray.life * 3, 1) * 0.8; // quick fade-in, slow fade-out
       if (alpha <= 0) continue;
 
-      // Draw the base white ray
       ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(ray.startX, ray.startY);
-      ctx.lineTo(ray.endX, ray.endY);
 
-      // Static ray width (no animation)
-      const baseWidth = ray.active ? 3 : 2;
-
-      // Create gradient along the ray
-      const grad = ctx.createLinearGradient(ray.startX, ray.startY, ray.endX, ray.endY);
-      grad.addColorStop(0, rgba(255, 255, 255, 0));
-      grad.addColorStop(0.15, rgba(255, 255, 255, alpha));
-      grad.addColorStop(0.85, rgba(255, 255, 255, alpha));
-      grad.addColorStop(1, rgba(255, 255, 255, 0));
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = baseWidth;
-      ctx.stroke();
-
-      // Soft glow around the ray
-      ctx.beginPath();
-      ctx.moveTo(ray.startX, ray.startY);
-      ctx.lineTo(ray.endX, ray.endY);
-      ctx.strokeStyle = rgba(255, 255, 255, alpha * 0.15);
-      ctx.lineWidth = baseWidth * 6;
-      ctx.stroke();
-
-      // If active (player holding), draw rainbow dispersion
-      if (ray.active && prismHolding) {
-        const result = pointToRayDistance(prismHoldX, prismHoldY, ray);
-
-        // Intensity scales with hold time and prism count (more lumens = more intense)
-        const prismCount = getUpgradeCount('prism');
-        const holdIntensity = Math.min(ray.holdTime / 60, 3); // ramps over 1s, up to 3x
-        const prismIntensity = 1 + prismCount * 0.15; // more prisms = brighter
-        const totalIntensity = Math.min(holdIntensity * prismIntensity, 4);
-
-        // Draw prism point glow — scales with intensity
-        const glowSize = 60 + totalIntensity * 30;
-        const prismGlow = ctx.createRadialGradient(
-          result.cx, result.cy, 0,
-          result.cx, result.cy, glowSize
-        );
-        prismGlow.addColorStop(0, rgba(255, 255, 255, alpha * Math.min(0.9 + totalIntensity * 0.1, 1.0)));
-        prismGlow.addColorStop(0.3, rgba(255, 255, 255, alpha * Math.min(0.3 + totalIntensity * 0.15, 0.8)));
-        prismGlow.addColorStop(1, rgba(255, 255, 255, 0));
-        ctx.beginPath();
-        ctx.arc(result.cx, result.cy, glowSize, 0, Math.PI * 2);
-        ctx.fillStyle = prismGlow;
-        ctx.fill();
-
-        // Rainbow dispersion rays — length and width scale with intensity
-        const rayLength = 100 + totalIntensity * 60;
-        const rayWidth = 2.5 + totalIntensity * 1.5;
-
-        for (let c = 0; c < RAINBOW.length; c++) {
-          const angle = ray.colorAngles ? ray.colorAngles[c] : 0;
-          const endRX = result.cx + Math.cos(angle) * rayLength;
-          const endRY = result.cy + Math.sin(angle) * rayLength;
-
-          const holdAlpha = Math.min(ray.holdTime / 30, 1) * alpha;
-          const intensifiedAlpha = Math.min(holdAlpha * (1 + totalIntensity * 0.3), 1.0);
-
-          ctx.beginPath();
-          ctx.moveTo(result.cx, result.cy);
-          ctx.lineTo(endRX, endRY);
-          ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.7) + ')';
-          ctx.lineWidth = rayWidth;
-          ctx.stroke();
-
-          // Glow at the end of each rainbow ray — scales with intensity
-          const glowR = 10 + totalIntensity * 8;
-          ctx.beginPath();
-          ctx.arc(endRX, endRY, glowR, 0, Math.PI * 2);
-          ctx.fillStyle = RAINBOW[c] + (intensifiedAlpha * 0.4) + ')';
-          ctx.fill();
-
-          // Extra soft halo around each ray for high intensity
-          if (totalIntensity > 1.5) {
-            ctx.beginPath();
-            ctx.moveTo(result.cx, result.cy);
-            ctx.lineTo(endRX, endRY);
-            ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.15) + ')';
-            ctx.lineWidth = rayWidth * 4;
-            ctx.stroke();
-          }
-        }
-
-        // Intensify light based on lumens generated (pure light, no text)
-        if (ray.holdTime % 20 === 0 && ray.holdTime > 0) {
-          const lumensThisBurst = ray.lumensGenerated;
-          if (lumensThisBurst > 0) {
-            const burstIntensity = Math.min(lumensThisBurst / 50, 1.5) + 0.3;
-            // Radiant glow pulse at prism point
-            halos.push({
-              type: 'glow',
-              x: result.cx + (Math.random() - 0.5) * 20,
-              y: result.cy + (Math.random() - 0.5) * 20,
-              maxRadius: 30 * burstIntensity,
-              opacity: 0.5 * burstIntensity,
-              life: 1.0,
-              decay: 0.03,
-              delay: 0,
-            });
-            ray.lumensGenerated = 0;
-          }
-        }
-      }
-
-      // Draw a subtle "energy remaining" indicator — ray dims from end
-      if (ray.life < 0.5) {
-        const fadeAlpha = ray.life / 0.5;
+      if (gameMode === 'off') {
+        // OFF MODE: Onyx — dark absorption ray that swallows light
         ctx.beginPath();
         ctx.moveTo(ray.startX, ray.startY);
         ctx.lineTo(ray.endX, ray.endY);
-        ctx.strokeStyle = rgba(255, 255, 255, (1 - fadeAlpha) * 0.3);
-        ctx.lineWidth = baseWidth * 0.5;
-        ctx.setLineDash([4, 8]);
+        const baseWidth = ray.active ? 4 : 2.5;
+
+        // Dark ray core
+        const grad = ctx.createLinearGradient(ray.startX, ray.startY, ray.endX, ray.endY);
+        grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        grad.addColorStop(0.15, 'rgba(0, 0, 0, ' + alpha + ')');
+        grad.addColorStop(0.85, 'rgba(0, 0, 0, ' + alpha + ')');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = baseWidth;
         ctx.stroke();
-        ctx.setLineDash([]);
+
+        // Dark purple glow around the ray
+        ctx.beginPath();
+        ctx.moveTo(ray.startX, ray.startY);
+        ctx.lineTo(ray.endX, ray.endY);
+        ctx.strokeStyle = 'rgba(40, 0, 60, ' + (alpha * 0.2) + ')';
+        ctx.lineWidth = baseWidth * 8;
+        ctx.stroke();
+
+        // If active: draw absorption vortex (anti-prism — swallows light)
+        if (ray.active && prismHolding) {
+          const result = pointToRayDistance(prismHoldX, prismHoldY, ray);
+          const prismCount = getUpgradeCount('prism');
+          const holdIntensity = Math.min(ray.holdTime / 60, 3);
+          const prismIntensity = 1 + prismCount * 0.15;
+          const totalIntensity = Math.min(holdIntensity * prismIntensity, 4);
+
+          // Dark absorption vortex at hold point
+          const vortexSize = 50 + totalIntensity * 40;
+          const vortexGlow = ctx.createRadialGradient(
+            result.cx, result.cy, 0,
+            result.cx, result.cy, vortexSize
+          );
+          vortexGlow.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * Math.min(0.8 + totalIntensity * 0.1, 1.0)) + ')');
+          vortexGlow.addColorStop(0.3, 'rgba(20, 0, 30, ' + (alpha * Math.min(0.4 + totalIntensity * 0.1, 0.7)) + ')');
+          vortexGlow.addColorStop(0.7, 'rgba(40, 0, 60, ' + (alpha * 0.15) + ')');
+          vortexGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.beginPath();
+          ctx.arc(result.cx, result.cy, vortexSize, 0, Math.PI * 2);
+          ctx.fillStyle = vortexGlow;
+          ctx.fill();
+
+          // Spiral absorption arms (light being sucked in)
+          const armCount = 5;
+          const spiralReach = 80 + totalIntensity * 50;
+          const spiralPhase = ray.colorAngles ? ray.colorAngles[0] : 0;
+
+          ctx.save();
+          ctx.translate(result.cx, result.cy);
+          for (let a = 0; a < armCount; a++) {
+            const baseAngle = (a / armCount) * Math.PI * 2 + spiralPhase;
+            ctx.beginPath();
+            for (let t = 0; t < 1; t += 0.03) {
+              const spiralR = vortexSize * 0.3 + t * (spiralReach - vortexSize * 0.3);
+              const spiralA = baseAngle + t * Math.PI * 2;
+              const sx = Math.cos(spiralA) * spiralR;
+              const sy = Math.sin(spiralA) * spiralR;
+              if (t === 0) ctx.moveTo(sx, sy);
+              else ctx.lineTo(sx, sy);
+            }
+            const armAlpha = Math.min(ray.holdTime / 30, 1) * alpha;
+            ctx.strokeStyle = 'rgba(0, 0, 0, ' + (armAlpha * 0.5) + ')';
+            ctx.lineWidth = 1.5 + totalIntensity * 0.5;
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // Periodic void pulse
+          if (ray.holdTime % 20 === 0 && ray.holdTime > 0) {
+            const lumensThisBurst = ray.lumensGenerated;
+            if (lumensThisBurst > 0) {
+              const burstIntensity = Math.min(lumensThisBurst / 50, 1.5) + 0.3;
+              halos.push({
+                type: 'void-collapse',
+                x: result.cx + (Math.random() - 0.5) * 20,
+                y: result.cy + (Math.random() - 0.5) * 20,
+                maxRadius: 40 * burstIntensity,
+                opacity: 0.4 * burstIntensity,
+                life: 1.0,
+                decay: 0.03,
+                delay: 0,
+              });
+              ray.lumensGenerated = 0;
+            }
+          }
+        }
+
+        // Dying ray effect
+        if (ray.life < 0.5) {
+          const fadeAlpha = ray.life / 0.5;
+          ctx.beginPath();
+          ctx.moveTo(ray.startX, ray.startY);
+          ctx.lineTo(ray.endX, ray.endY);
+          ctx.strokeStyle = 'rgba(0, 0, 0, ' + ((1 - fadeAlpha) * 0.2) + ')';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 10]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+      } else {
+        // ON MODE: Classic prism with rainbow dispersion
+        ctx.beginPath();
+        ctx.moveTo(ray.startX, ray.startY);
+        ctx.lineTo(ray.endX, ray.endY);
+        const baseWidth = ray.active ? 3 : 2;
+
+        const grad = ctx.createLinearGradient(ray.startX, ray.startY, ray.endX, ray.endY);
+        grad.addColorStop(0, rgba(255, 255, 255, 0));
+        grad.addColorStop(0.15, rgba(255, 255, 255, alpha));
+        grad.addColorStop(0.85, rgba(255, 255, 255, alpha));
+        grad.addColorStop(1, rgba(255, 255, 255, 0));
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = baseWidth;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(ray.startX, ray.startY);
+        ctx.lineTo(ray.endX, ray.endY);
+        ctx.strokeStyle = rgba(255, 255, 255, alpha * 0.15);
+        ctx.lineWidth = baseWidth * 6;
+        ctx.stroke();
+
+        if (ray.active && prismHolding) {
+          const result = pointToRayDistance(prismHoldX, prismHoldY, ray);
+          const prismCount = getUpgradeCount('prism');
+          const holdIntensity = Math.min(ray.holdTime / 60, 3);
+          const prismIntensity = 1 + prismCount * 0.15;
+          const totalIntensity = Math.min(holdIntensity * prismIntensity, 4);
+
+          const glowSize = 60 + totalIntensity * 30;
+          const prismGlow = ctx.createRadialGradient(
+            result.cx, result.cy, 0,
+            result.cx, result.cy, glowSize
+          );
+          prismGlow.addColorStop(0, rgba(255, 255, 255, alpha * Math.min(0.9 + totalIntensity * 0.1, 1.0)));
+          prismGlow.addColorStop(0.3, rgba(255, 255, 255, alpha * Math.min(0.3 + totalIntensity * 0.15, 0.8)));
+          prismGlow.addColorStop(1, rgba(255, 255, 255, 0));
+          ctx.beginPath();
+          ctx.arc(result.cx, result.cy, glowSize, 0, Math.PI * 2);
+          ctx.fillStyle = prismGlow;
+          ctx.fill();
+
+          const rayLength = 100 + totalIntensity * 60;
+          const rayWidth = 2.5 + totalIntensity * 1.5;
+
+          for (let c = 0; c < RAINBOW.length; c++) {
+            const angle = ray.colorAngles ? ray.colorAngles[c] : 0;
+            const endRX = result.cx + Math.cos(angle) * rayLength;
+            const endRY = result.cy + Math.sin(angle) * rayLength;
+
+            const holdAlpha = Math.min(ray.holdTime / 30, 1) * alpha;
+            const intensifiedAlpha = Math.min(holdAlpha * (1 + totalIntensity * 0.3), 1.0);
+
+            ctx.beginPath();
+            ctx.moveTo(result.cx, result.cy);
+            ctx.lineTo(endRX, endRY);
+            ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.7) + ')';
+            ctx.lineWidth = rayWidth;
+            ctx.stroke();
+
+            const glowR = 10 + totalIntensity * 8;
+            ctx.beginPath();
+            ctx.arc(endRX, endRY, glowR, 0, Math.PI * 2);
+            ctx.fillStyle = RAINBOW[c] + (intensifiedAlpha * 0.4) + ')';
+            ctx.fill();
+
+            if (totalIntensity > 1.5) {
+              ctx.beginPath();
+              ctx.moveTo(result.cx, result.cy);
+              ctx.lineTo(endRX, endRY);
+              ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.15) + ')';
+              ctx.lineWidth = rayWidth * 4;
+              ctx.stroke();
+            }
+          }
+
+          if (ray.holdTime % 20 === 0 && ray.holdTime > 0) {
+            const lumensThisBurst = ray.lumensGenerated;
+            if (lumensThisBurst > 0) {
+              const burstIntensity = Math.min(lumensThisBurst / 50, 1.5) + 0.3;
+              halos.push({
+                type: 'glow',
+                x: result.cx + (Math.random() - 0.5) * 20,
+                y: result.cy + (Math.random() - 0.5) * 20,
+                maxRadius: 30 * burstIntensity,
+                opacity: 0.5 * burstIntensity,
+                life: 1.0,
+                decay: 0.03,
+                delay: 0,
+              });
+              ray.lumensGenerated = 0;
+            }
+          }
+        }
+
+        if (ray.life < 0.5) {
+          const fadeAlpha = ray.life / 0.5;
+          ctx.beginPath();
+          ctx.moveTo(ray.startX, ray.startY);
+          ctx.lineTo(ray.endX, ray.endY);
+          ctx.strokeStyle = rgba(255, 255, 255, (1 - fadeAlpha) * 0.3);
+          ctx.lineWidth = baseWidth * 0.5;
+          ctx.setLineDash([4, 8]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
 
       ctx.restore();
@@ -2722,6 +3326,90 @@
       opacity: 0.7 * intensity,
       life: 1.0,
       decay: 0.03,
+      delay: delay || 0,
+    });
+  }
+
+  // OFF MODE: Fissure — dark cracks in reality
+  function spawnFissureCrack(clickX, clickY, count, delay) {
+    const intensity = Math.min(0.6 + count * 0.08, 1.2);
+    // Cracks radiate outward from click point in random directions
+    const crackAngle = Math.random() * Math.PI * 2;
+    const crackLen = 80 + Math.random() * 120 + count * 15;
+    const endX = clickX + Math.cos(crackAngle) * crackLen;
+    const endY = clickY + Math.sin(crackAngle) * crackLen;
+
+    // Generate a jagged crack path
+    const segments = 6 + Math.floor(count / 2);
+    const jitter = 30 + count * 5;
+    const points = [{ x: clickX, y: clickY }];
+    const dx = endX - clickX;
+    const dy = endY - clickY;
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      points.push({
+        x: clickX + dx * t + (Math.random() - 0.5) * jitter,
+        y: clickY + dy * t + (Math.random() - 0.5) * jitter * 0.5,
+      });
+    }
+    points.push({ x: endX, y: endY });
+
+    // Add crack as a halo with custom rendering
+    halos.push({
+      type: 'void-crack',
+      x: clickX, y: clickY,
+      maxRadius: crackLen,
+      opacity: intensity * 0.9,
+      life: 1.0,
+      decay: 0.02,
+      delay: delay || 0,
+      points: points,
+      crackWidth: 2 + count * 0.4,
+    });
+
+    // Spawn secondary micro-cracks branching off
+    const branchCount = Math.min(1 + Math.floor(count / 4), 3);
+    for (let b = 0; b < branchCount; b++) {
+      const branchIdx = 1 + Math.floor(Math.random() * (segments - 1));
+      const branchPt = points[branchIdx];
+      const branchAngle = crackAngle + (Math.random() - 0.5) * 1.5;
+      const branchLen = 20 + Math.random() * 50;
+      const branchEnd = {
+        x: branchPt.x + Math.cos(branchAngle) * branchLen,
+        y: branchPt.y + Math.sin(branchAngle) * branchLen,
+      };
+      const branchPoints = [branchPt];
+      for (let s = 1; s < 3; s++) {
+        const bt = s / 3;
+        branchPoints.push({
+          x: branchPt.x + (branchEnd.x - branchPt.x) * bt + (Math.random() - 0.5) * jitter * 0.3,
+          y: branchPt.y + (branchEnd.y - branchPt.y) * bt + (Math.random() - 0.5) * jitter * 0.3,
+        });
+      }
+      branchPoints.push(branchEnd);
+
+      halos.push({
+        type: 'void-crack',
+        x: branchPt.x, y: branchPt.y,
+        maxRadius: branchLen,
+        opacity: intensity * 0.5,
+        life: 1.0,
+        decay: 0.025,
+        delay: (delay || 0) + 2,
+        points: branchPoints,
+        crackWidth: 1 + count * 0.2,
+      });
+    }
+
+    // Dark void at click impact
+    halos.push({
+      type: 'void-collapse',
+      x: clickX, y: clickY,
+      maxRadius: 40 * intensity,
+      opacity: 0.6 * intensity,
+      life: 1.0,
+      decay: 0.025,
       delay: delay || 0,
     });
   }
