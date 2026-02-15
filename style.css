@@ -104,11 +104,11 @@ html, body {
   padding-bottom: 12px;
 }
 
-#upgrade-panel-header h2 {
-  font-size: 1.1rem;
+#lumen-counter {
+  font-size: 0.9rem;
   font-weight: normal;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.6;
 }
 
 #upgrade-close {
