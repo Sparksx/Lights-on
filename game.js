@@ -257,6 +257,15 @@
         ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
+      } else if (h.type === 'combo-text') {
+        // Floating combo multiplier text
+        const floatY = h.y - (1 - h.life) * 40;
+        ctx.save();
+        ctx.font = 'bold 16px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillText(h.text, h.x, floatY);
+        ctx.restore();
       } else if (h.type === 'edge') {
         // Vignette glow from screen edges
         const w = canvas.width;
@@ -303,6 +312,107 @@
     });
   }
 
+  // --- Rubbing/swiping mechanic ---
+  let isRubbing = false;
+  let lastRubX = 0;
+  let lastRubY = 0;
+  let rubDistance = 0;
+  const RUB_THRESHOLD = 20; // pixels of movement to generate lumens
+
+  function startRub(x, y) {
+    if (state.victoryReached) return;
+    isRubbing = true;
+    lastRubX = x;
+    lastRubY = y;
+    rubDistance = 0;
+  }
+
+  function moveRub(x, y) {
+    if (!isRubbing || state.victoryReached) return;
+    const dx = x - lastRubX;
+    const dy = y - lastRubY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    rubDistance += dist;
+    lastRubX = x;
+    lastRubY = y;
+
+    // Generate small sparks along the rub path
+    if (rubDistance >= RUB_THRESHOLD) {
+      const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3));
+      state.lumens += rubPower;
+      state.totalLumens += rubPower;
+      rubDistance -= RUB_THRESHOLD;
+
+      // Small spark particle
+      halos.push({
+        type: 'glow',
+        x, y,
+        maxRadius: 8 + Math.random() * 12,
+        opacity: 0.3 + Math.random() * 0.3,
+        life: 1.0,
+        decay: 0.06,
+        delay: 0,
+      });
+
+      checkMilestones();
+      updateUI();
+    }
+  }
+
+  function endRub() {
+    isRubbing = false;
+    rubDistance = 0;
+  }
+
+  gameArea.addEventListener('mousedown', function (e) {
+    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle')) return;
+    startRub(e.clientX, e.clientY);
+  });
+  gameArea.addEventListener('mousemove', function (e) {
+    if (e.target.closest('#upgrade-panel')) return;
+    moveRub(e.clientX, e.clientY);
+  });
+  gameArea.addEventListener('mouseup', endRub);
+  gameArea.addEventListener('mouseleave', endRub);
+
+  gameArea.addEventListener('touchmove', function (e) {
+    if (e.target.closest('#upgrade-panel')) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    moveRub(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  gameArea.addEventListener('touchend', endRub);
+  gameArea.addEventListener('touchcancel', endRub);
+
+  // --- Combo system ---
+  let comboCount = 0;
+  let comboTimer = null;
+  const COMBO_WINDOW = 800; // ms between clicks to maintain combo
+  const COMBO_DECAY = 2000; // ms before combo fully resets
+
+  function getComboMultiplier() {
+    if (comboCount < 3) return 1;
+    if (comboCount < 8) return 1.5;
+    if (comboCount < 15) return 2;
+    if (comboCount < 25) return 3;
+    return 5;
+  }
+
+  function showComboText(x, y, multiplier, lumens) {
+    // Floating text showing combo info
+    halos.push({
+      type: 'combo-text',
+      x, y: y - 20,
+      text: multiplier > 1 ? 'x' + multiplier + ' !' : '+' + lumens,
+      opacity: 1.0,
+      life: 1.0,
+      decay: 0.02,
+      delay: 0,
+      maxRadius: 0,
+    });
+  }
+
   // --- Click handler ---
   function handleClick(e) {
     if (state.victoryReached) return;
@@ -315,10 +425,26 @@
 
     if (x === undefined || y === undefined) return;
 
-    state.lumens += state.clickPower;
-    state.totalLumens += state.clickPower;
+    // Check if clicking a light burst orb
+    clickLightBurst(x, y);
+
+    // Combo tracking
+    comboCount++;
+    if (comboTimer) clearTimeout(comboTimer);
+    comboTimer = setTimeout(function () {
+      comboCount = 0;
+    }, COMBO_DECAY);
+
+    const multiplier = getComboMultiplier();
+    const gain = Math.floor(state.clickPower * multiplier);
+
+    state.lumens += gain;
+    state.totalLumens += gain;
 
     addHalo(x, y);
+    if (multiplier > 1) {
+      showComboText(x, y, multiplier, gain);
+    }
     checkMilestones();
     updateUI();
   }
@@ -328,6 +454,7 @@
     if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#victory-screen')) return;
     e.preventDefault();
     const touch = e.touches[0];
+    startRub(touch.clientX, touch.clientY);
     handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target });
   }, { passive: false });
 
@@ -358,10 +485,25 @@
       return;
     }
 
-    addEdgeGlow();
+    pendingReward = true;
     recalcPassive();
     renderUpgrades();
     updateUI();
+
+    // Auto-close if no more affordable upgrades
+    if (!hasAffordableUpgrade()) {
+      closeUpgradePanel();
+    }
+  }
+
+  function hasAffordableUpgrade() {
+    for (const up of UPGRADES) {
+      const count = getUpgradeCount(up.id);
+      if (count >= up.maxCount) continue;
+      if (state.totalLumens < up.unlockAt) continue;
+      if (state.lumens >= getUpgradeCost(up)) return true;
+    }
+    return false;
   }
 
   function recalcPassive() {
@@ -461,6 +603,8 @@
     upgradePanel.classList.remove('open');
     victoryScreen.classList.add('hidden');
     halos.length = 0;
+    lightBursts.length = 0;
+    comboCount = 0;
     updateUI();
     renderUpgrades();
   });
@@ -481,21 +625,147 @@
     upgradePanel.classList.remove('open');
     victoryScreen.classList.add('hidden');
     halos.length = 0;
+    lightBursts.length = 0;
+    comboCount = 0;
     updateUI();
     renderUpgrades();
   });
 
   // --- Upgrade panel toggle ---
+  let pendingReward = false;
+
+  function closeUpgradePanel() {
+    upgradePanel.classList.remove('open');
+    if (pendingReward) {
+      pendingReward = false;
+      addEdgeGlow();
+    }
+  }
+
   upgradeToggle.addEventListener('click', function (e) {
     e.stopPropagation();
-    upgradePanel.classList.toggle('open');
-    renderUpgrades();
+    if (upgradePanel.classList.contains('open')) {
+      closeUpgradePanel();
+    } else {
+      upgradePanel.classList.add('open');
+      renderUpgrades();
+    }
   });
 
   upgradeClose.addEventListener('click', function (e) {
     e.stopPropagation();
-    upgradePanel.classList.remove('open');
+    closeUpgradePanel();
   });
+
+  // --- Light burst events (collectible orbs) ---
+  const lightBursts = [];
+  let nextBurstTime = Date.now() + 8000 + Math.random() * 12000;
+
+  function spawnLightBurst() {
+    const margin = 60;
+    const x = margin + Math.random() * (canvas.width - margin * 2);
+    const y = margin + Math.random() * (canvas.height - margin * 2);
+    const baseBonus = Math.max(10, Math.floor(state.totalLumens * 0.03));
+    const bonus = baseBonus + Math.floor(Math.random() * baseBonus);
+
+    lightBursts.push({
+      x, y,
+      radius: 20,
+      bonus: bonus,
+      life: 1.0,
+      decay: 0.002, // ~8 seconds to disappear
+      pulse: 0,
+    });
+  }
+
+  function checkBurstSpawn() {
+    if (state.victoryReached) return;
+    if (Date.now() >= nextBurstTime && lightBursts.length < 3) {
+      spawnLightBurst();
+      nextBurstTime = Date.now() + 10000 + Math.random() * 15000;
+    }
+  }
+
+  function updateLightBursts() {
+    for (let i = lightBursts.length - 1; i >= 0; i--) {
+      const b = lightBursts[i];
+      b.life -= b.decay;
+      b.pulse += 0.05;
+      if (b.life <= 0) {
+        lightBursts.splice(i, 1);
+      }
+    }
+  }
+
+  function drawLightBursts() {
+    for (const b of lightBursts) {
+      const alpha = Math.min(b.life * 2, 1); // fade in then out
+      const pulseScale = 1 + 0.15 * Math.sin(b.pulse);
+      const r = b.radius * pulseScale;
+
+      // Outer glow
+      const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 2.5);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.4})`);
+      gradient.addColorStop(0.4, `rgba(255, 255, 255, ${alpha * 0.15})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, r * 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Core
+      const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
+      core.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+      core.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.2})`);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = core;
+      ctx.fill();
+    }
+  }
+
+  function clickLightBurst(x, y) {
+    for (let i = lightBursts.length - 1; i >= 0; i--) {
+      const b = lightBursts[i];
+      const dx = x - b.x;
+      const dy = y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= b.radius * 3) {
+        // Collected!
+        state.lumens += b.bonus;
+        state.totalLumens += b.bonus;
+
+        // Burst effect
+        halos.push({
+          type: 'glow',
+          x: b.x, y: b.y,
+          maxRadius: 80,
+          opacity: 0.8,
+          life: 1.0,
+          decay: 0.02,
+          delay: 0,
+        });
+
+        // Show bonus text
+        halos.push({
+          type: 'combo-text',
+          x: b.x, y: b.y - 20,
+          text: '+' + formatNumber(b.bonus) + ' !',
+          opacity: 1.0,
+          life: 1.0,
+          decay: 0.015,
+          delay: 0,
+          maxRadius: 0,
+        });
+
+        lightBursts.splice(i, 1);
+        checkMilestones();
+        updateUI();
+        return true;
+      }
+    }
+    return false;
+  }
 
   // --- Passive income tick ---
   function passiveTick() {
@@ -559,7 +829,10 @@
   // --- Game loop ---
   function gameLoop() {
     updateHalos();
+    updateLightBursts();
+    checkBurstSpawn();
     drawHalos();
+    drawLightBursts();
     requestAnimationFrame(gameLoop);
   }
 
