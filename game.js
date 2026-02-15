@@ -11,6 +11,7 @@
     lumensPerSecond: 0,
     upgrades: {},
     victoryReached: false,
+    sunPurchased: false,
   };
 
   // --- Constants ---
@@ -143,6 +144,9 @@
   const lumenCounter = document.getElementById('lumen-counter');
   const victoryScreen = document.getElementById('victory-screen');
   const restartBtn = document.getElementById('restart-btn');
+  const switchContainer = document.getElementById('switch-container');
+  const lightSwitch = document.getElementById('light-switch');
+  const switchLever = document.getElementById('switch-lever');
 
   // --- Canvas setup ---
   const halos = [];
@@ -320,7 +324,7 @@
   const RUB_THRESHOLD = 20; // pixels of movement to generate lumens
 
   function startRub(x, y) {
-    if (state.victoryReached) return;
+    if (state.victoryReached || state.sunPurchased || sunCinematicActive) return;
     isRubbing = true;
     lastRubX = x;
     lastRubY = y;
@@ -328,7 +332,7 @@
   }
 
   function moveRub(x, y) {
-    if (!isRubbing || state.victoryReached) return;
+    if (!isRubbing || state.victoryReached || state.sunPurchased || sunCinematicActive) return;
     if (getUpgradeCount('spark') === 0) return;
     const dx = x - lastRubX;
     const dy = y - lastRubY;
@@ -366,7 +370,7 @@
   }
 
   gameArea.addEventListener('mousedown', function (e) {
-    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle')) return;
+    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#switch-container')) return;
     startRub(e.clientX, e.clientY);
     startPrismHold(e.clientX, e.clientY);
   });
@@ -419,10 +423,10 @@
 
   // --- Click handler ---
   function handleClick(e) {
-    if (state.victoryReached) return;
+    if (state.victoryReached || state.sunPurchased || sunCinematicActive) return;
 
     // Don't count clicks on UI elements
-    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle')) return;
+    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#switch-container')) return;
 
     const x = e.clientX || (e.touches && e.touches[0].clientX);
     const y = e.clientY || (e.touches && e.touches[0].clientY);
@@ -455,7 +459,7 @@
 
   gameArea.addEventListener('click', handleClick);
   gameArea.addEventListener('touchstart', function (e) {
-    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#victory-screen')) return;
+    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#victory-screen') || e.target.closest('#switch-container')) return;
     e.preventDefault();
     const touch = e.touches[0];
     startRub(touch.clientX, touch.clientY);
@@ -486,7 +490,11 @@
     if (upgrade.type === 'click') {
       state.clickPower += upgrade.value;
     } else if (upgrade.type === 'victory') {
-      triggerVictory();
+      state.sunPurchased = true;
+      closeUpgradePanel();
+      upgradeToggle.classList.add('hidden');
+      showSwitch();
+      save();
       return;
     }
 
@@ -586,6 +594,158 @@
     progressFill.style.width = (progress * 100) + '%';
   }
 
+  // --- Switch interaction ---
+  let sunCinematicActive = false;
+  let sunCinematicProgress = 0;
+
+  function showSwitch() {
+    switchContainer.classList.remove('hidden');
+  }
+
+  lightSwitch.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!state.sunPurchased || sunCinematicActive) return;
+
+    // Flip the switch
+    switchLever.classList.add('on');
+
+    // Start the sun cinematic after a brief pause
+    setTimeout(function () {
+      switchContainer.classList.add('hidden');
+      playSunCinematic();
+    }, 600);
+  });
+
+  // --- Sun cinematic ---
+  function playSunCinematic() {
+    sunCinematicActive = true;
+    sunCinematicProgress = 0;
+
+    // Clear existing effects
+    halos.length = 0;
+    lightBursts.length = 0;
+    prismRays.length = 0;
+
+    // Create cinematic canvas
+    const cinCanvas = document.createElement('canvas');
+    cinCanvas.id = 'sun-cinematic';
+    cinCanvas.width = window.innerWidth;
+    cinCanvas.height = window.innerHeight;
+    cinCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:45;pointer-events:none;';
+    gameArea.appendChild(cinCanvas);
+    const cinCtx = cinCanvas.getContext('2d');
+
+    const centerX = cinCanvas.width / 2;
+    const centerY = cinCanvas.height * 0.35;
+    const maxRadius = Math.max(cinCanvas.width, cinCanvas.height) * 1.5;
+
+    // Phase 1: Sun appears and grows (0 -> 0.4)
+    // Phase 2: Rays expand outward (0.3 -> 0.7)
+    // Phase 3: Screen fills with white (0.6 -> 1.0)
+
+    function animateCinematic() {
+      sunCinematicProgress += 0.003;
+
+      cinCtx.clearRect(0, 0, cinCanvas.width, cinCanvas.height);
+
+      if (sunCinematicProgress < 1.0) {
+        // Phase 1: Growing sun core
+        if (sunCinematicProgress < 0.5) {
+          const phase1 = sunCinematicProgress / 0.5;
+          const sunRadius = easeOutCubic(phase1) * 60;
+          const glowRadius = easeOutCubic(phase1) * 200;
+          const alpha = easeOutCubic(phase1);
+
+          // Outer warm glow
+          const outerGlow = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
+          outerGlow.addColorStop(0, 'rgba(255, 240, 200, ' + (alpha * 0.4) + ')');
+          outerGlow.addColorStop(0.3, 'rgba(255, 220, 150, ' + (alpha * 0.2) + ')');
+          outerGlow.addColorStop(1, 'rgba(255, 200, 100, 0)');
+          cinCtx.beginPath();
+          cinCtx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
+          cinCtx.fillStyle = outerGlow;
+          cinCtx.fill();
+
+          // Sun core
+          const coreGlow = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, sunRadius);
+          coreGlow.addColorStop(0, 'rgba(255, 255, 255, ' + alpha + ')');
+          coreGlow.addColorStop(0.6, 'rgba(255, 250, 230, ' + (alpha * 0.8) + ')');
+          coreGlow.addColorStop(1, 'rgba(255, 240, 200, 0)');
+          cinCtx.beginPath();
+          cinCtx.arc(centerX, centerY, sunRadius, 0, Math.PI * 2);
+          cinCtx.fillStyle = coreGlow;
+          cinCtx.fill();
+        }
+
+        // Phase 2: Rays burst from sun
+        if (sunCinematicProgress >= 0.25 && sunCinematicProgress < 0.75) {
+          const phase2 = (sunCinematicProgress - 0.25) / 0.5;
+          const rayCount = 12;
+          const rayLength = easeOutCubic(phase2) * maxRadius * 0.6;
+          const rayAlpha = Math.min(phase2 * 2, 1) * (1 - Math.max(0, (phase2 - 0.7) / 0.3));
+
+          for (let i = 0; i < rayCount; i++) {
+            const angle = (i / rayCount) * Math.PI * 2 + sunCinematicProgress * 0.5;
+            const endX = centerX + Math.cos(angle) * rayLength;
+            const endY = centerY + Math.sin(angle) * rayLength;
+
+            const rayGrad = cinCtx.createLinearGradient(centerX, centerY, endX, endY);
+            rayGrad.addColorStop(0, 'rgba(255, 255, 240, ' + (rayAlpha * 0.8) + ')');
+            rayGrad.addColorStop(1, 'rgba(255, 255, 240, 0)');
+
+            cinCtx.beginPath();
+            cinCtx.moveTo(centerX, centerY);
+            cinCtx.lineTo(endX, endY);
+            cinCtx.strokeStyle = rayGrad;
+            cinCtx.lineWidth = 3 + phase2 * 8;
+            cinCtx.stroke();
+          }
+
+          // Persistent sun core during rays
+          const sunR = 60 + phase2 * 30;
+          const coreGlow = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, sunR);
+          coreGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+          coreGlow.addColorStop(0.5, 'rgba(255, 250, 230, 0.9)');
+          coreGlow.addColorStop(1, 'rgba(255, 240, 200, 0)');
+          cinCtx.beginPath();
+          cinCtx.arc(centerX, centerY, sunR, 0, Math.PI * 2);
+          cinCtx.fillStyle = coreGlow;
+          cinCtx.fill();
+        }
+
+        // Phase 3: White flood fills the screen
+        if (sunCinematicProgress >= 0.55) {
+          const phase3 = (sunCinematicProgress - 0.55) / 0.45;
+          const floodRadius = easeOutCubic(phase3) * maxRadius;
+          const floodAlpha = easeOutCubic(phase3);
+
+          const flood = cinCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, floodRadius);
+          flood.addColorStop(0, 'rgba(255, 255, 255, ' + floodAlpha + ')');
+          flood.addColorStop(0.6, 'rgba(255, 255, 255, ' + (floodAlpha * 0.8) + ')');
+          flood.addColorStop(1, 'rgba(255, 255, 255, ' + (floodAlpha * 0.3) + ')');
+          cinCtx.beginPath();
+          cinCtx.arc(centerX, centerY, floodRadius, 0, Math.PI * 2);
+          cinCtx.fillStyle = flood;
+          cinCtx.fill();
+        }
+
+        requestAnimationFrame(animateCinematic);
+      } else {
+        // Cinematic done — fill white then show victory
+        cinCtx.fillStyle = '#fff';
+        cinCtx.fillRect(0, 0, cinCanvas.width, cinCanvas.height);
+
+        setTimeout(function () {
+          cinCanvas.remove();
+          sunCinematicActive = false;
+          triggerVictory();
+        }, 800);
+      }
+    }
+
+    requestAnimationFrame(animateCinematic);
+  }
+
   // --- Victory ---
   function triggerVictory() {
     state.victoryReached = true;
@@ -603,10 +763,14 @@
     state.lumensPerSecond = 0;
     state.upgrades = {};
     state.victoryReached = false;
+    state.sunPurchased = false;
+    sunCinematicActive = false;
     upgradeUnlocked = false;
     upgradeToggle.classList.add('hidden');
     upgradePanel.classList.remove('open');
     victoryScreen.classList.add('hidden');
+    switchContainer.classList.add('hidden');
+    switchLever.classList.remove('on');
     halos.length = 0;
     lightBursts.length = 0;
     prismRays.length = 0;
@@ -627,10 +791,14 @@
     state.lumensPerSecond = 0;
     state.upgrades = {};
     state.victoryReached = false;
+    state.sunPurchased = false;
+    sunCinematicActive = false;
     upgradeUnlocked = false;
     upgradeToggle.classList.add('hidden');
     upgradePanel.classList.remove('open');
     victoryScreen.classList.add('hidden');
+    switchContainer.classList.add('hidden');
+    switchLever.classList.remove('on');
     halos.length = 0;
     lightBursts.length = 0;
     prismRays.length = 0;
@@ -699,7 +867,7 @@
   }
 
   function checkBurstSpawn() {
-    if (state.victoryReached) return;
+    if (state.victoryReached || state.sunPurchased) return;
     if (getUpgradeCount('firefly') === 0) return;
     if (Date.now() >= nextBurstTime && lightBursts.length < 3) {
       spawnLightBurst();
@@ -908,7 +1076,7 @@
   }
 
   function checkRaySpawn() {
-    if (state.victoryReached) return;
+    if (state.victoryReached || state.sunPurchased) return;
     if (getUpgradeCount('prism') === 0) return;
     if (Date.now() >= nextRayTime && prismRays.length < 2) {
       spawnPrismRay();
@@ -1129,7 +1297,7 @@
 
   // --- Passive income tick ---
   function passiveTick() {
-    if (state.victoryReached) return;
+    if (state.victoryReached || state.sunPurchased) return;
     if (state.lumensPerSecond > 0) {
       const gain = state.lumensPerSecond / 10; // called 10x per sec
       state.lumens += gain;
@@ -1147,6 +1315,7 @@
       clickPower: state.clickPower,
       upgrades: state.upgrades,
       victoryReached: state.victoryReached,
+      sunPurchased: state.sunPurchased,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -1165,6 +1334,7 @@
       state.clickPower = data.clickPower || 1;
       state.upgrades = data.upgrades || {};
       state.victoryReached = data.victoryReached || false;
+      state.sunPurchased = data.sunPurchased || false;
 
       recalcPassive();
       checkMilestones();
@@ -1173,6 +1343,9 @@
 
       if (state.victoryReached) {
         victoryScreen.classList.remove('hidden');
+      } else if (state.sunPurchased) {
+        upgradeToggle.classList.add('hidden');
+        showSwitch();
       }
     } catch (_) {
       // corrupted save, ignore
