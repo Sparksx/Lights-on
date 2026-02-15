@@ -20,9 +20,9 @@
   // --- Upgrades Definition ---
   const UPGRADES = [
     {
-      id: 'candle',
-      name: 'Bougie',
-      desc: '+1 lumen/sec',
+      id: 'spark',
+      name: 'Étincelle',
+      desc: 'Frotte, et la lueur naît',
       baseCost: 50,
       costMultiplier: 1.4,
       type: 'passive',
@@ -31,75 +31,97 @@
       unlockAt: 0,
     },
     {
-      id: 'click1',
-      name: 'Clic renforcé',
-      desc: '+1 lumen par clic',
-      baseCost: 200,
-      costMultiplier: 1.8,
+      id: 'firefly',
+      name: 'Luciole',
+      desc: 'Cligne dans le noir',
+      baseCost: 150,
+      costMultiplier: 1.7,
       type: 'click',
       value: 1,
       maxCount: 25,
-      unlockAt: 100,
+      unlockAt: 80,
     },
     {
-      id: 'oil_lamp',
-      name: 'Lampe à huile',
-      desc: '+5 lumens/sec',
-      baseCost: 500,
+      id: 'candle',
+      name: 'Bougie',
+      desc: 'Elle fond pour que d\'autres y voient',
+      baseCost: 400,
       costMultiplier: 1.5,
       type: 'passive',
       value: 5,
       maxCount: 30,
-      unlockAt: 300,
+      unlockAt: 250,
     },
     {
-      id: 'click2',
-      name: 'Clic puissant',
-      desc: '+5 lumens par clic',
-      baseCost: 1500,
-      costMultiplier: 2.0,
+      id: 'prism',
+      name: 'Prisme',
+      desc: 'Un rayon entre, sept en sortent',
+      baseCost: 1000,
+      costMultiplier: 1.9,
       type: 'click',
-      value: 5,
+      value: 3,
       maxCount: 20,
-      unlockAt: 800,
+      unlockAt: 600,
     },
     {
-      id: 'bulb',
-      name: 'Ampoule',
-      desc: '+25 lumens/sec',
-      baseCost: 5000,
+      id: 'lantern',
+      name: 'Lanterne',
+      desc: 'La flamme emprisonnée voyage',
+      baseCost: 3000,
       costMultiplier: 1.5,
       type: 'passive',
-      value: 25,
+      value: 20,
       maxCount: 25,
-      unlockAt: 3000,
+      unlockAt: 2000,
     },
     {
-      id: 'neon',
-      name: 'Néon',
-      desc: '+100 lumens/sec',
+      id: 'lightning',
+      name: 'Éclair',
+      desc: 'Frappe et illumine',
+      baseCost: 8000,
+      costMultiplier: 2.0,
+      type: 'click',
+      value: 10,
+      maxCount: 15,
+      unlockAt: 5000,
+    },
+    {
+      id: 'lighthouse',
+      name: 'Phare',
+      desc: 'Tourne sans fin pour les égarés',
       baseCost: 15000,
       costMultiplier: 1.6,
       type: 'passive',
-      value: 100,
+      value: 80,
       maxCount: 20,
       unlockAt: 10000,
     },
     {
-      id: 'projector',
-      name: 'Projecteur',
-      desc: '+500 lumens/sec',
-      baseCost: 50000,
+      id: 'aurora',
+      name: 'Aurore',
+      desc: 'Le vent solaire touche le ciel',
+      baseCost: 40000,
+      costMultiplier: 1.6,
+      type: 'passive',
+      value: 250,
+      maxCount: 15,
+      unlockAt: 25000,
+    },
+    {
+      id: 'star',
+      name: 'Étoile',
+      desc: 'Quatre milliards d\'années de fusion',
+      baseCost: 100000,
       costMultiplier: 1.7,
       type: 'passive',
-      value: 500,
-      maxCount: 15,
-      unlockAt: 35000,
+      value: 800,
+      maxCount: 10,
+      unlockAt: 60000,
     },
     {
       id: 'sun',
       name: 'Soleil',
-      desc: 'La lumière totale',
+      desc: '?',
       baseCost: 200000,
       costMultiplier: 1,
       type: 'victory',
@@ -118,6 +140,7 @@
   const upgradePanel = document.getElementById('upgrade-panel');
   const upgradeClose = document.getElementById('upgrade-close');
   const upgradeList = document.getElementById('upgrade-list');
+  const lumenCounter = document.getElementById('lumen-counter');
   const victoryScreen = document.getElementById('victory-screen');
   const restartBtn = document.getElementById('restart-btn');
 
@@ -287,6 +310,7 @@
   }
 
   function renderUpgrades() {
+    lumenCounter.textContent = formatNumber(Math.floor(state.lumens)) + ' lm';
     upgradeList.innerHTML = '';
     for (const up of UPGRADES) {
       if (state.totalLumens < up.unlockAt && getUpgradeCount(up.id) === 0) continue;
@@ -309,7 +333,7 @@
       item.innerHTML = `
         <div class="upgrade-name">${up.name}</div>
         <div class="upgrade-desc">${up.desc}</div>
-        <div class="upgrade-cost">${isMaxed ? 'MAX' : formatNumber(cost) + ' lumens'}</div>
+        <div class="upgrade-cost">${isMaxed ? 'MAX' : formatNumber(cost) + ' lm'}</div>
         ${count > 0 ? `<div class="upgrade-count">x${count}</div>` : ''}
       `;
 
@@ -328,7 +352,7 @@
   let upgradeUnlocked = false;
 
   function checkMilestones() {
-    if (!upgradeUnlocked && state.totalLumens >= 25) {
+    if (!upgradeUnlocked && state.totalLumens >= 50) {
       upgradeUnlocked = true;
       upgradeToggle.classList.remove('hidden');
     }
