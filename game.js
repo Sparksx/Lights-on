@@ -710,6 +710,7 @@
   }
 
   function startConstellationDrag(x, y) {
+    if (acIsPenaltyActive()) return;
     if (getUpgradeCount('constellation') === 0) return;
     // Check if starting near a constellation star
     for (const c of activeConstellations) {
@@ -1896,7 +1897,7 @@
   const RUB_THRESHOLD = 20; // pixels of movement to generate lumens
 
   function startRub(x, y) {
-    if (state.victoryReached || state.sunPurchased || sunCinematicActive) return;
+    if (state.victoryReached || state.sunPurchased || sunCinematicActive || acIsPenaltyActive()) return;
     isRubbing = true;
     lastRubX = x;
     lastRubY = y;
@@ -1904,7 +1905,7 @@
   }
 
   function moveRub(x, y) {
-    if (!isRubbing || state.victoryReached || state.sunPurchased || sunCinematicActive) return;
+    if (!isRubbing || state.victoryReached || state.sunPurchased || sunCinematicActive || acIsPenaltyActive()) return;
     if (getUpgradeCount('spark') === 0) return;
     const dx = x - lastRubX;
     const dy = y - lastRubY;
@@ -2054,9 +2055,378 @@
     }
   }
 
+  // --- Anti Auto-Clicker Detection ---
+  var AC_BUFFER_SIZE = 30;           // number of clicks to track
+  var AC_MIN_AVG_INTERVAL = 45;      // ms — avg interval below this is too fast
+  var AC_REGULARITY_THRESHOLD = 12;  // ms — std deviation below this is suspiciously regular
+  var AC_SAME_POS_RADIUS = 3;        // px — clicks within this radius count as same spot
+  var AC_PENALTY_DURATION = 7000;    // ms — penalty blocks gameplay for 7 seconds
+  var AC_DETECTION_MIN_CLICKS = 20;  // need this many clicks before analyzing
+
+  var acClickTimes = [];
+  var acClickPositions = [];
+  var acPenaltyActive = false;
+  var acPenaltyStart = 0;
+  var acExplosionParticles = [];
+  var acWarningOpacity = 0;
+  var acPenaltyCount = 0;            // escalates penalty duration
+
+  function acRecordClick(x, y) {
+    acClickTimes.push(Date.now());
+    acClickPositions.push({ x: x, y: y });
+    if (acClickTimes.length > AC_BUFFER_SIZE) {
+      acClickTimes.shift();
+      acClickPositions.shift();
+    }
+  }
+
+  function acDetect() {
+    if (acClickTimes.length < AC_DETECTION_MIN_CLICKS) return false;
+
+    // Compute intervals
+    var intervals = [];
+    for (var i = 1; i < acClickTimes.length; i++) {
+      intervals.push(acClickTimes[i] - acClickTimes[i - 1]);
+    }
+
+    // Average interval
+    var sum = 0;
+    for (var j = 0; j < intervals.length; j++) sum += intervals[j];
+    var avg = sum / intervals.length;
+
+    // Standard deviation
+    var variance = 0;
+    for (var k = 0; k < intervals.length; k++) {
+      var diff = intervals[k] - avg;
+      variance += diff * diff;
+    }
+    var stdDev = Math.sqrt(variance / intervals.length);
+
+    // Same-position ratio
+    var sameCount = 0;
+    var lastPos = acClickPositions[acClickPositions.length - 1];
+    for (var m = 0; m < acClickPositions.length - 1; m++) {
+      var dx = acClickPositions[m].x - lastPos.x;
+      var dy = acClickPositions[m].y - lastPos.y;
+      if (Math.sqrt(dx * dx + dy * dy) < AC_SAME_POS_RADIUS) sameCount++;
+    }
+    var samePosRatio = sameCount / (acClickPositions.length - 1);
+
+    // Scoring — need score >= 2 to trigger
+    var score = 0;
+    if (avg < AC_MIN_AVG_INTERVAL) score += 2;                        // too fast
+    if (stdDev < AC_REGULARITY_THRESHOLD && avg < 100) score += 2;    // too regular
+    if (samePosRatio > 0.85 && avg < 100) score += 1;                 // same spot
+
+    return score >= 2;
+  }
+
+  function acTriggerPenalty() {
+    acPenaltyActive = true;
+    acPenaltyCount++;
+    // Escalate duration for repeat offenders (7s, 10s, 14s, ...)
+    var duration = AC_PENALTY_DURATION + (acPenaltyCount - 1) * 3000;
+    acPenaltyStart = Date.now();
+    acWarningOpacity = 1.0;
+    acExplosionParticles = [];
+    acClickTimes = [];
+    acClickPositions = [];
+    comboCount = 0;
+
+    var cx = canvas.width / 2;
+    var cy = canvas.height / 2;
+
+    // --- Create intense explosion particles ---
+    var particleCount = 250;
+    for (var i = 0; i < particleCount; i++) {
+      var angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.4;
+      var speed = 1.5 + Math.random() * 10;
+      var size = 3 + Math.random() * 14;
+      acExplosionParticles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: size,
+        life: 1.0,
+        decay: 0.002 + Math.random() * 0.004,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.2,
+        hue: Math.random() * 60,
+        trail: [],
+      });
+    }
+
+    // Debris chunks
+    for (var d = 0; d < 30; d++) {
+      var dAngle = Math.random() * Math.PI * 2;
+      var dSpeed = 3 + Math.random() * 6;
+      acExplosionParticles.push({
+        type: 'debris',
+        x: cx + (Math.random() - 0.5) * 40,
+        y: cy + (Math.random() - 0.5) * 40,
+        vx: Math.cos(dAngle) * dSpeed,
+        vy: Math.sin(dAngle) * dSpeed + Math.random() * 2,
+        size: 6 + Math.random() * 10,
+        life: 1.0,
+        decay: 0.004 + Math.random() * 0.003,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.3,
+      });
+    }
+
+    // Shockwave rings
+    for (var r = 0; r < 6; r++) {
+      acExplosionParticles.push({
+        type: 'shockwave',
+        x: cx,
+        y: cy,
+        radius: 0,
+        maxRadius: Math.max(canvas.width, canvas.height) * 0.8,
+        speed: 4 + r * 2.5,
+        life: 1.0,
+        decay: 0.007,
+        delay: r * 6,
+      });
+    }
+
+    // Store actual penalty end time
+    acPenaltyActive = duration;
+  }
+
+  function acGetPenaltyDuration() {
+    return typeof acPenaltyActive === 'number' ? acPenaltyActive : AC_PENALTY_DURATION;
+  }
+
+  function acIsPenaltyActive() {
+    if (acPenaltyActive === false) return false;
+    var elapsed = Date.now() - acPenaltyStart;
+    var duration = acGetPenaltyDuration();
+    if (elapsed >= duration) {
+      acPenaltyActive = false;
+      acExplosionParticles = [];
+      acWarningOpacity = 0;
+      return false;
+    }
+    return true;
+  }
+
+  function updateAcExplosion() {
+    if (!acIsPenaltyActive()) return;
+
+    var elapsed = Date.now() - acPenaltyStart;
+
+    for (var i = acExplosionParticles.length - 1; i >= 0; i--) {
+      var p = acExplosionParticles[i];
+
+      if (p.type === 'shockwave') {
+        if (p.delay > 0) { p.delay--; continue; }
+        p.radius += p.speed;
+        p.life -= p.decay;
+      } else if (p.type === 'debris') {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05; // gravity
+        p.vx *= 0.995;
+        p.rotation += p.rotSpeed;
+        p.life -= p.decay;
+      } else {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.992;
+        p.vy *= 0.992;
+        p.rotation += p.rotSpeed;
+        p.life -= p.decay;
+
+        if (p.life > 0.2 && p.trail.length < 12) {
+          p.trail.push({ x: p.x, y: p.y, alpha: p.life * 0.3 });
+        }
+        if (p.trail.length > 12) p.trail.shift();
+      }
+
+      if (p.life <= 0) {
+        acExplosionParticles.splice(i, 1);
+      }
+    }
+
+    // Fade warning text toward end
+    var duration = acGetPenaltyDuration();
+    if (elapsed > duration * 0.65) {
+      acWarningOpacity = Math.max(0, 1 - (elapsed - duration * 0.65) / (duration * 0.35));
+    }
+  }
+
+  function drawAcExplosion() {
+    if (!acIsPenaltyActive()) return;
+
+    var elapsed = Date.now() - acPenaltyStart;
+    var cx = canvas.width / 2;
+    var cy = canvas.height / 2;
+
+    // --- Screen shake ---
+    var shakeIntensity = Math.max(0, 1 - elapsed / 2500) * 18;
+    if (shakeIntensity > 0.5) {
+      ctx.save();
+      ctx.translate(
+        (Math.random() - 0.5) * shakeIntensity,
+        (Math.random() - 0.5) * shakeIntensity
+      );
+    }
+
+    // --- Background flash / darkness ---
+    var flashAlpha = Math.max(0, 0.9 - elapsed / 1200);
+    if (flashAlpha > 0) {
+      if (gameMode === 'off') {
+        ctx.fillStyle = 'rgba(0, 0, 0, ' + flashAlpha + ')';
+      } else {
+        ctx.fillStyle = 'rgba(255, 180, 60, ' + flashAlpha + ')';
+      }
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // --- Shockwaves ---
+    for (var s = 0; s < acExplosionParticles.length; s++) {
+      var sw = acExplosionParticles[s];
+      if (sw.type !== 'shockwave') continue;
+      if (sw.delay > 0) continue;
+      var swAlpha = sw.life * 0.5;
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+      if (gameMode === 'off') {
+        ctx.strokeStyle = 'rgba(60, 0, 90, ' + swAlpha + ')';
+      } else {
+        ctx.strokeStyle = 'rgba(255, ' + Math.floor(120 + (sw.radius % 80)) + ', 30, ' + swAlpha + ')';
+      }
+      ctx.lineWidth = 2 + sw.life * 6;
+      ctx.stroke();
+    }
+
+    // --- Particles + trails ---
+    for (var j = 0; j < acExplosionParticles.length; j++) {
+      var p = acExplosionParticles[j];
+      if (p.type === 'shockwave') continue;
+
+      var alpha = Math.max(0, p.life);
+
+      // Trail
+      if (p.trail) {
+        for (var t = 0; t < p.trail.length; t++) {
+          var tr = p.trail[t];
+          var trAlpha = tr.alpha * (t / p.trail.length) * 0.4;
+          if (trAlpha < 0.01) continue;
+          ctx.beginPath();
+          ctx.arc(tr.x, tr.y, p.size * 0.4, 0, Math.PI * 2);
+          if (gameMode === 'off') {
+            ctx.fillStyle = 'rgba(40, 0, 60, ' + trAlpha + ')';
+          } else {
+            ctx.fillStyle = 'rgba(255, ' + Math.floor(80 + p.hue * 2) + ', 30, ' + trAlpha + ')';
+          }
+          ctx.fill();
+        }
+      }
+
+      // Particle body
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+
+      if (p.type === 'debris') {
+        // Debris = jagged rectangles
+        if (gameMode === 'off') {
+          ctx.fillStyle = 'rgba(20, 0, 40, ' + alpha + ')';
+        } else {
+          ctx.fillStyle = 'rgba(255, ' + Math.floor(150 + Math.random() * 100) + ', 50, ' + alpha + ')';
+        }
+        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      } else {
+        // Glowing particle
+        var grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+        if (gameMode === 'off') {
+          grad.addColorStop(0, 'rgba(100, 0, 150, ' + alpha + ')');
+          grad.addColorStop(0.5, 'rgba(50, 0, 90, ' + (alpha * 0.5) + ')');
+          grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        } else {
+          grad.addColorStop(0, 'rgba(255, 255, 200, ' + alpha + ')');
+          grad.addColorStop(0.5, 'rgba(255, 140, 40, ' + (alpha * 0.6) + ')');
+          grad.addColorStop(1, 'rgba(255, 50, 0, 0)');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // --- Pulsing vignette overlay ---
+    var vignetteAlpha = acWarningOpacity * 0.35 * (0.7 + Math.sin(elapsed * 0.004) * 0.3);
+    if (vignetteAlpha > 0.01) {
+      var vGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(canvas.width, canvas.height) * 0.7);
+      vGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      if (gameMode === 'off') {
+        vGrad.addColorStop(1, 'rgba(60, 0, 100, ' + vignetteAlpha + ')');
+      } else {
+        vGrad.addColorStop(1, 'rgba(180, 40, 0, ' + vignetteAlpha + ')');
+      }
+      ctx.fillStyle = vGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // --- Warning text ---
+    if (acWarningOpacity > 0.01) {
+      var textAlpha = acWarningOpacity;
+      var pulse = 0.85 + Math.sin(elapsed * 0.006) * 0.15;
+      var baseFontSize = Math.min(Math.max(canvas.width * 0.045, 22), 56);
+      var fontSize = Math.floor(baseFontSize * pulse);
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold ' + fontSize + 'px "Courier New", Courier, monospace';
+
+      if (gameMode === 'off') {
+        ctx.shadowColor = 'rgba(100, 0, 160, ' + textAlpha + ')';
+      } else {
+        ctx.shadowColor = 'rgba(255, 80, 0, ' + textAlpha + ')';
+      }
+      ctx.shadowBlur = 25;
+
+      if (gameMode === 'off') {
+        ctx.fillStyle = 'rgba(0, 0, 0, ' + textAlpha + ')';
+      } else {
+        ctx.fillStyle = 'rgba(255, 220, 120, ' + textAlpha + ')';
+      }
+      ctx.fillText(
+        gameMode === 'off' ? 'SURCHARGE OBSCURE' : 'SURCHARGE LUMINEUSE',
+        cx, cy - fontSize * 0.9
+      );
+
+      // Sub-text
+      var subSize = Math.floor(fontSize * 0.45);
+      ctx.font = subSize + 'px "Courier New", Courier, monospace';
+      ctx.shadowBlur = 12;
+      ctx.fillText('Clic automatique d\u00E9tect\u00E9', cx, cy + fontSize * 0.3);
+
+      // Penalty counter (if repeat offender)
+      if (acPenaltyCount > 1) {
+        ctx.font = Math.floor(subSize * 0.8) + 'px "Courier New", Courier, monospace';
+        ctx.fillText('Avertissement #' + acPenaltyCount, cx, cy + fontSize * 0.3 + subSize * 1.4);
+      }
+
+      ctx.restore();
+    }
+
+    if (shakeIntensity > 0.5) {
+      ctx.restore();
+    }
+  }
+
   // --- Click handler ---
   function handleClick(e) {
     if (state.victoryReached || state.sunPurchased || sunCinematicActive) return;
+
+    // Block all clicks during auto-clicker penalty
+    if (acIsPenaltyActive()) return;
 
     // Don't count clicks on UI elements
     if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#switch-container')) return;
@@ -2065,6 +2435,13 @@
     const y = e.clientY || (e.touches && e.touches[0].clientY);
 
     if (x === undefined || y === undefined) return;
+
+    // Record click for auto-clicker detection
+    acRecordClick(x, y);
+    if (acDetect()) {
+      acTriggerPenalty();
+      return;
+    }
 
     // Check if clicking a light burst orb
     clickLightBurst(x, y);
@@ -3487,6 +3864,7 @@
 
   // --- Prism interaction handlers ---
   function startPrismHold(x, y) {
+    if (acIsPenaltyActive()) return;
     prismHolding = true;
     prismHoldX = x;
     prismHoldY = y;
@@ -3529,6 +3907,7 @@
       upgrades: state.upgrades,
       victoryReached: state.victoryReached,
       sunPurchased: state.sunPurchased,
+      acPenaltyCount: acPenaltyCount,
     };
     try {
       localStorage.setItem(getSaveKey(), JSON.stringify(data));
@@ -3548,6 +3927,7 @@
       state.upgrades = data.upgrades || {};
       state.victoryReached = data.victoryReached || false;
       state.sunPurchased = data.sunPurchased || false;
+      acPenaltyCount = data.acPenaltyCount || 0;
 
       recalcPassive();
       checkMilestones();
@@ -3593,6 +3973,7 @@
     updateLightningBolts();
     checkBurstSpawn();
     checkRaySpawn();
+    updateAcExplosion();
 
     // Clear canvas then draw (back to front)
     if (gameMode === 'off') {
@@ -3610,6 +3991,7 @@
     drawPrismRays();
     drawLightBursts();
     drawPulsar();
+    drawAcExplosion();
     requestAnimationFrame(gameLoop);
   }
 
