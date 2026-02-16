@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -39,6 +39,11 @@
       <div id="intro-plea"></div>
     </div>
 
+    <!-- OFFLINE EARNINGS POPUP -->
+    <div id="offline-popup" class="hidden">
+      <div id="offline-text"></div>
+    </div>
+
     <div id="progress-bar">
       <div id="progress-fill"></div>
     </div>
@@ -62,7 +67,7 @@
     </div>
 
     <div id="switch-container" class="hidden">
-      <div id="switch-hint">Allumez la lumière</div>
+      <div id="switch-hint">Turn on the light</div>
       <div id="light-switch">
         <div id="switch-plate">
           <div id="switch-lever"></div>
@@ -72,8 +77,10 @@
 
     <div id="victory-screen" class="hidden">
       <h1 id="victory-title">LIGHTS ON</h1>
-      <p id="victory-text">Vous avez ramené la lumière.</p>
-      <button id="restart-btn">Recommencer</button>
+      <p id="victory-text">You brought back the light.</p>
+      <p id="prestige-info"></p>
+      <button id="prestige-btn">Cross Over</button>
+      <button id="restart-btn">Restart</button>
     </div>
   </div>
 

@@ -9,6 +9,29 @@
   var _st = window.setTimeout.bind(window);
   var _now = Date.now.bind(Date);
 
+  // --- Prestige ---
+  var prestigeLevel = 0;
+  var prestigeMultiplier = 1;
+  var PRESTIGE_SAVE_KEY = 'light-prestige';
+
+  function loadPrestige() {
+    try {
+      var raw = localStorage.getItem(PRESTIGE_SAVE_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      prestigeLevel = data.level || 0;
+      prestigeMultiplier = 1 + prestigeLevel * 0.5;
+    } catch(_) {}
+  }
+
+  function savePrestige() {
+    try {
+      localStorage.setItem(PRESTIGE_SAVE_KEY, JSON.stringify({ level: prestigeLevel }));
+    } catch(_) {}
+  }
+
+  loadPrestige();
+
   // --- Game Mode ---
   // 'on' = classic (dark→light), 'off' = inverted (light→dark)
   let gameMode = null; // set by landing page
@@ -39,12 +62,12 @@
     const switchHint = document.getElementById('switch-hint');
     if (mode === 'off') {
       victoryTitle.textContent = 'LIGHTS OFF';
-      victoryText.textContent = 'Vous avez éteint la lumière.';
-      switchHint.textContent = 'Éteignez la lumière';
+      victoryText.textContent = 'You turned off the light.';
+      switchHint.textContent = 'Turn off the light';
     } else {
       victoryTitle.textContent = 'LIGHTS ON';
-      victoryText.textContent = 'Vous avez ramené la lumière.';
-      switchHint.textContent = 'Allumez la lumière';
+      victoryText.textContent = 'You brought back the light.';
+      switchHint.textContent = 'Turn on the light';
     }
 
     // Save chosen mode
@@ -113,8 +136,8 @@
   const UPGRADES = [
     {
       id: 'spark',
-      name: 'Étincelle',
-      desc: 'Frotte, et la lueur naît',
+      name: 'Spark',
+      desc: 'Rub, and the glow is born',
       baseCost: 50,
       costMultiplier: 1.4,
       type: 'passive',
@@ -124,8 +147,8 @@
     },
     {
       id: 'firefly',
-      name: 'Luciole',
-      desc: 'Cligne dans le noir',
+      name: 'Firefly',
+      desc: 'Blinks in the dark',
       baseCost: 150,
       costMultiplier: 1.7,
       type: 'burst',
@@ -135,8 +158,8 @@
     },
     {
       id: 'candle',
-      name: 'Bougie',
-      desc: 'Elle fond pour que d\'autres y voient',
+      name: 'Candle',
+      desc: 'It melts so others can see',
       baseCost: 400,
       costMultiplier: 1.5,
       type: 'passive',
@@ -146,8 +169,8 @@
     },
     {
       id: 'prism',
-      name: 'Prisme',
-      desc: 'Un rayon entre, sept en sortent',
+      name: 'Prism',
+      desc: 'One ray in, seven out',
       baseCost: 1000,
       costMultiplier: 1.9,
       type: 'click',
@@ -157,8 +180,8 @@
     },
     {
       id: 'lantern',
-      name: 'Lanterne',
-      desc: 'La flamme emprisonnée voyage',
+      name: 'Lantern',
+      desc: 'The caged flame travels far',
       baseCost: 3000,
       costMultiplier: 1.5,
       type: 'passive',
@@ -168,8 +191,8 @@
     },
     {
       id: 'lightning',
-      name: 'Éclair',
-      desc: 'Frappe et illumine',
+      name: 'Lightning',
+      desc: 'Strikes and illuminates',
       baseCost: 8000,
       costMultiplier: 2.0,
       type: 'click',
@@ -179,8 +202,8 @@
     },
     {
       id: 'lighthouse',
-      name: 'Phare',
-      desc: 'Tourne sans fin pour les égarés',
+      name: 'Lighthouse',
+      desc: 'Turns endlessly for the lost',
       baseCost: 15000,
       costMultiplier: 1.6,
       type: 'passive',
@@ -190,8 +213,8 @@
     },
     {
       id: 'aurora',
-      name: 'Aurore',
-      desc: 'Le vent solaire touche le ciel',
+      name: 'Aurora',
+      desc: 'Solar wind touches the sky',
       baseCost: 40000,
       costMultiplier: 1.6,
       type: 'passive',
@@ -201,8 +224,8 @@
     },
     {
       id: 'star',
-      name: 'Étoile',
-      desc: 'Quatre milliards d\'années de fusion',
+      name: 'Star',
+      desc: 'Four billion years of fusion',
       baseCost: 100000,
       costMultiplier: 1.7,
       type: 'passive',
@@ -213,7 +236,7 @@
     {
       id: 'supernova',
       name: 'Supernova',
-      desc: 'L\'étoile meurt dans un cri de lumière',
+      desc: 'The star dies in a scream of light',
       baseCost: 300000,
       costMultiplier: 1.65,
       type: 'passive',
@@ -224,7 +247,7 @@
     {
       id: 'pulsar',
       name: 'Pulsar',
-      desc: 'Un battement de cœur dans le vide',
+      desc: 'A heartbeat in the void',
       baseCost: 800000,
       costMultiplier: 2.0,
       type: 'click',
@@ -234,8 +257,8 @@
     },
     {
       id: 'nebula',
-      name: 'Nébuleuse',
-      desc: 'Le berceau des soleils à naître',
+      name: 'Nebula',
+      desc: 'The cradle of unborn suns',
       baseCost: 2000000,
       costMultiplier: 1.6,
       type: 'passive',
@@ -245,8 +268,8 @@
     },
     {
       id: 'comet',
-      name: 'Comète',
-      desc: 'Une traînée de glace et de feu',
+      name: 'Comet',
+      desc: 'A trail of ice and fire',
       baseCost: 5000000,
       costMultiplier: 1.8,
       type: 'burst',
@@ -257,7 +280,7 @@
     {
       id: 'quasar',
       name: 'Quasar',
-      desc: 'Plus brillant qu\'un milliard de soleils',
+      desc: 'Brighter than a billion suns',
       baseCost: 15000000,
       costMultiplier: 1.65,
       type: 'passive',
@@ -268,7 +291,7 @@
     {
       id: 'plasma',
       name: 'Plasma',
-      desc: 'Le quatrième état de la matière',
+      desc: 'The fourth state of matter',
       baseCost: 40000000,
       costMultiplier: 2.0,
       type: 'click',
@@ -279,7 +302,7 @@
     {
       id: 'constellation',
       name: 'Constellation',
-      desc: 'Des histoires écrites dans le ciel',
+      desc: 'Stories written in the sky',
       baseCost: 100000000,
       costMultiplier: 1.6,
       type: 'passive',
@@ -289,8 +312,8 @@
     },
     {
       id: 'galaxy',
-      name: 'Galaxie',
-      desc: 'Cent milliards d\'étoiles dansent',
+      name: 'Galaxy',
+      desc: 'A hundred billion stars dance',
       baseCost: 300000000,
       costMultiplier: 1.65,
       type: 'passive',
@@ -300,8 +323,8 @@
     },
     {
       id: 'whitehole',
-      name: 'Trou blanc',
-      desc: 'Ce qui a été avalé est rendu',
+      name: 'White Hole',
+      desc: 'What was swallowed is returned',
       baseCost: 1000000000,
       costMultiplier: 1.7,
       type: 'passive',
@@ -311,8 +334,8 @@
     },
     {
       id: 'darkmatter',
-      name: 'Matière noire',
-      desc: 'Invisible, elle sculpte l\'univers',
+      name: 'Dark Matter',
+      desc: 'Invisible, it sculpts the universe',
       baseCost: 3000000000,
       costMultiplier: 1.7,
       type: 'passive',
@@ -323,7 +346,7 @@
     {
       id: 'bigbang',
       name: 'Big Bang',
-      desc: 'Que la lumière soit',
+      desc: 'Let there be light',
       baseCost: 10000000000,
       costMultiplier: 1.75,
       type: 'passive',
@@ -333,8 +356,8 @@
     },
     {
       id: 'cosmiclight',
-      name: 'Lumière cosmique',
-      desc: 'L\'écho du premier instant',
+      name: 'Cosmic Light',
+      desc: 'The echo of the first instant',
       baseCost: 30000000000,
       costMultiplier: 1.8,
       type: 'passive',
@@ -344,8 +367,8 @@
     },
     {
       id: 'multiverse',
-      name: 'Multivers',
-      desc: 'Chaque choix, un nouveau soleil',
+      name: 'Multiverse',
+      desc: 'Every choice, a new sun',
       baseCost: 100000000000,
       costMultiplier: 1.85,
       type: 'passive',
@@ -355,8 +378,8 @@
     },
     {
       id: 'eternity',
-      name: 'Éternité',
-      desc: 'Le temps n\'est plus qu\'une lueur',
+      name: 'Eternity',
+      desc: 'Time is nothing but a glimmer',
       baseCost: 400000000000,
       costMultiplier: 1.9,
       type: 'passive',
@@ -366,7 +389,7 @@
     },
     {
       id: 'sun',
-      name: 'Soleil',
+      name: 'Sun',
       desc: '?',
       baseCost: 1000000000000,
       costMultiplier: 1,
@@ -381,30 +404,30 @@
   // Maps upgrade id → { name, desc } for the "Lights Off" universe
   // Unique progression: entropy, silence, void — NOT dark mirrors of light concepts
   const SHADOW_THEME = {
-    spark:         { name: 'Murmure',           desc: 'Le premier son qui s\'éteint' },
-    firefly:       { name: 'Éphémère',          desc: 'N\'existe que pour disparaître' },
-    candle:        { name: 'Suie',              desc: 'Ce qui reste quand la flamme meurt' },
-    prism:         { name: 'Onyx',              desc: 'La pierre qui avale la lumière' },
-    lantern:       { name: 'Braise',            desc: 'Le dernier soupir du feu' },
-    lightning:     { name: 'Fissure',           desc: 'La réalité se fend' },
-    lighthouse:    { name: 'Sirène',            desc: 'Attire vers les profondeurs' },
-    aurora:        { name: 'Crépuscule',        desc: 'Le ciel se referme' },
-    star:          { name: 'Cendre',            desc: 'Poussière de ce qui fut' },
-    supernova:     { name: 'Singularité',       desc: 'Le point de non-retour' },
-    pulsar:        { name: 'Vortex',            desc: 'Un tourbillon sans fond' },
-    nebula:        { name: 'Miasme',            desc: 'Un brouillard qui dévore' },
-    comet:         { name: 'Spectre',           desc: 'L\'écho d\'une lumière morte' },
-    quasar:        { name: 'Abîme',             desc: 'Regarde trop longtemps, il te regarde' },
-    plasma:        { name: 'Entropie',          desc: 'Le désordre absolu' },
-    constellation: { name: 'Oubli',             desc: 'Les souvenirs se dissolvent' },
-    galaxy:        { name: 'Maelström',         desc: 'Le tourbillon final' },
-    whitehole:     { name: 'Horizon',           desc: 'Au-delà, rien ne revient' },
-    darkmatter:    { name: 'Néant',             desc: 'L\'absence même d\'absence' },
-    bigbang:       { name: 'Big Crunch',        desc: 'L\'univers se replie sur lui-même' },
-    cosmiclight:   { name: 'Silence cosmique',  desc: 'Le dernier écho s\'éteint' },
-    multiverse:    { name: 'Dissolution',       desc: 'La matière retourne au vide' },
-    eternity:      { name: 'Extinction',        desc: 'Le temps cesse de couler' },
-    sun:           { name: 'Éclipse',           desc: '?' },
+    spark:         { name: 'Whisper',           desc: 'The first sound fading out' },
+    firefly:       { name: 'Ephemeral',         desc: 'Exists only to vanish' },
+    candle:        { name: 'Soot',              desc: 'What remains when the flame dies' },
+    prism:         { name: 'Onyx',              desc: 'The stone that swallows light' },
+    lantern:       { name: 'Ember',             desc: 'The last breath of fire' },
+    lightning:     { name: 'Fissure',           desc: 'Reality cracks open' },
+    lighthouse:    { name: 'Siren',             desc: 'Lures toward the depths' },
+    aurora:        { name: 'Twilight',          desc: 'The sky closes shut' },
+    star:          { name: 'Cinder',            desc: 'Dust of what once was' },
+    supernova:     { name: 'Singularity',       desc: 'The point of no return' },
+    pulsar:        { name: 'Vortex',            desc: 'A bottomless whirlpool' },
+    nebula:        { name: 'Miasma',            desc: 'A fog that devours' },
+    comet:         { name: 'Specter',           desc: 'The echo of a dead light' },
+    quasar:        { name: 'Abyss',             desc: 'Stare too long, it stares back' },
+    plasma:        { name: 'Entropy',           desc: 'Absolute disorder' },
+    constellation: { name: 'Oblivion',          desc: 'Memories dissolve' },
+    galaxy:        { name: 'Maelstrom',         desc: 'The final whirlpool' },
+    whitehole:     { name: 'Horizon',           desc: 'Beyond it, nothing returns' },
+    darkmatter:    { name: 'Void',              desc: 'The very absence of absence' },
+    bigbang:       { name: 'Big Crunch',        desc: 'The universe folds upon itself' },
+    cosmiclight:   { name: 'Cosmic Silence',    desc: 'The last echo fades' },
+    multiverse:    { name: 'Dissolution',       desc: 'Matter returns to the void' },
+    eternity:      { name: 'Extinction',        desc: 'Time ceases to flow' },
+    sun:           { name: 'Eclipse',           desc: '?' },
   };
 
   // Helper to get display name/desc based on current mode
@@ -437,8 +460,10 @@
   const switchContainer = document.getElementById('switch-container');
   const lightSwitch = document.getElementById('light-switch');
   const switchLever = document.getElementById('switch-lever');
+  const prestigeBtn = document.getElementById('prestige-btn');
+  const prestigeInfo = document.getElementById('prestige-info');
 
-  // --- Background stars system (Étoile upgrade #9) ---
+  // --- Background stars system (Star upgrade #9) ---
   const bgStars = [];
   let lastStarCount = 0;
 
@@ -509,21 +534,20 @@
   // --- Constellation system (upgrade #16) ---
   // Known constellation patterns (normalized 0-1 coordinates)
   const CONSTELLATION_TEMPLATES = [
-    { name: 'Grande Ourse', stars: [{x:0.0,y:0.4},{x:0.15,y:0.25},{x:0.3,y:0.2},{x:0.45,y:0.25},{x:0.55,y:0.4},{x:0.7,y:0.55},{x:0.85,y:0.5}], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]] },
+    { name: 'Ursa Major', stars: [{x:0.0,y:0.4},{x:0.15,y:0.25},{x:0.3,y:0.2},{x:0.45,y:0.25},{x:0.55,y:0.4},{x:0.7,y:0.55},{x:0.85,y:0.5}], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]] },
     { name: 'Orion', stars: [{x:0.3,y:0.0},{x:0.7,y:0.05},{x:0.2,y:0.35},{x:0.5,y:0.4},{x:0.8,y:0.35},{x:0.5,y:0.5},{x:0.35,y:0.7},{x:0.5,y:0.65},{x:0.65,y:0.7},{x:0.25,y:1.0},{x:0.75,y:1.0}], edges: [[0,2],[1,4],[2,3],[3,4],[2,5],[4,5],[5,6],[5,8],[6,7],[7,8],[6,9],[8,10]] },
-    { name: 'Cassiopée', stars: [{x:0.0,y:0.6},{x:0.25,y:0.2},{x:0.5,y:0.5},{x:0.75,y:0.15},{x:1.0,y:0.55}], edges: [[0,1],[1,2],[2,3],[3,4]] },
-    { name: 'Cygne', stars: [{x:0.5,y:0.0},{x:0.5,y:0.3},{x:0.5,y:0.6},{x:0.5,y:1.0},{x:0.15,y:0.45},{x:0.85,y:0.45}], edges: [[0,1],[1,2],[2,3],[4,2],[2,5]] },
-    { name: 'Lion', stars: [{x:0.3,y:0.0},{x:0.15,y:0.2},{x:0.0,y:0.45},{x:0.2,y:0.55},{x:0.35,y:0.35},{x:0.5,y:0.25},{x:0.85,y:0.3},{x:1.0,y:0.55},{x:0.7,y:0.6}], edges: [[0,1],[1,2],[2,3],[3,4],[4,0],[0,5],[5,6],[6,7],[7,8],[8,6]] },
-    { name: 'Scorpion', stars: [{x:0.2,y:0.0},{x:0.25,y:0.15},{x:0.3,y:0.3},{x:0.4,y:0.45},{x:0.5,y:0.55},{x:0.6,y:0.65},{x:0.7,y:0.75},{x:0.8,y:0.85},{x:0.9,y:0.9},{x:1.0,y:0.85}], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]] },
-    { name: 'Lyre', stars: [{x:0.5,y:0.0},{x:0.3,y:0.4},{x:0.7,y:0.4},{x:0.25,y:0.8},{x:0.75,y:0.8}], edges: [[0,1],[0,2],[1,2],[1,3],[2,4],[3,4]] },
-    { name: 'Gémeaux', stars: [{x:0.3,y:0.0},{x:0.7,y:0.0},{x:0.25,y:0.3},{x:0.75,y:0.3},{x:0.2,y:0.6},{x:0.8,y:0.6},{x:0.3,y:0.9},{x:0.7,y:0.9}], edges: [[0,1],[0,2],[1,3],[2,4],[3,5],[4,6],[5,7],[2,3]] },
+    { name: 'Cassiopeia', stars: [{x:0.0,y:0.6},{x:0.25,y:0.2},{x:0.5,y:0.5},{x:0.75,y:0.15},{x:1.0,y:0.55}], edges: [[0,1],[1,2],[2,3],[3,4]] },
+    { name: 'Cygnus', stars: [{x:0.5,y:0.0},{x:0.5,y:0.3},{x:0.5,y:0.6},{x:0.5,y:1.0},{x:0.15,y:0.45},{x:0.85,y:0.45}], edges: [[0,1],[1,2],[2,3],[4,2],[2,5]] },
+    { name: 'Leo', stars: [{x:0.3,y:0.0},{x:0.15,y:0.2},{x:0.0,y:0.45},{x:0.2,y:0.55},{x:0.35,y:0.35},{x:0.5,y:0.25},{x:0.85,y:0.3},{x:1.0,y:0.55},{x:0.7,y:0.6}], edges: [[0,1],[1,2],[2,3],[3,4],[4,0],[0,5],[5,6],[6,7],[7,8],[8,6]] },
+    { name: 'Scorpius', stars: [{x:0.2,y:0.0},{x:0.25,y:0.15},{x:0.3,y:0.3},{x:0.4,y:0.45},{x:0.5,y:0.55},{x:0.6,y:0.65},{x:0.7,y:0.75},{x:0.8,y:0.85},{x:0.9,y:0.9},{x:1.0,y:0.85}], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]] },
+    { name: 'Lyra', stars: [{x:0.5,y:0.0},{x:0.3,y:0.4},{x:0.7,y:0.4},{x:0.25,y:0.8},{x:0.75,y:0.8}], edges: [[0,1],[0,2],[1,2],[1,3],[2,4],[3,4]] },
+    { name: 'Gemini', stars: [{x:0.3,y:0.0},{x:0.7,y:0.0},{x:0.25,y:0.3},{x:0.75,y:0.3},{x:0.2,y:0.6},{x:0.8,y:0.6},{x:0.3,y:0.9},{x:0.7,y:0.9}], edges: [[0,1],[0,2],[1,3],[2,4],[3,5],[4,6],[5,7],[2,3]] },
   ];
 
   const activeConstellations = [];
   let nextConstellationTime = _now() + 5000;
   let constellationDragActive = false;
   let constellationDragPath = []; // {x, y} points the user has dragged through
-  let constellationTracedEdges = []; // edges already validated in current drag
 
   function spawnConstellation() {
     const constellationCount = getUpgradeCount('constellation');
@@ -728,7 +752,7 @@
         if (Math.sqrt(dx * dx + dy * dy) < 25) {
           constellationDragActive = true;
           constellationDragPath = [{ x: x, y: y, starIdx: si, constellation: c }];
-          constellationTracedEdges = [];
+          // start tracing
           s.traced = true;
           return;
         }
@@ -1607,7 +1631,8 @@
 
       h.life -= h.decay;
       if (h.life <= 0) {
-        halos.splice(i, 1);
+        halos[i] = halos[halos.length - 1];
+        halos.pop();
       }
     }
   }
@@ -1922,7 +1947,7 @@
 
     // Generate particles along the rub path
     if (rubDistance >= RUB_THRESHOLD) {
-      const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3));
+      const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3 * prestigeMultiplier));
       state.lumens += rubPower;
       state.totalLumens += rubPower;
       rubDistance -= RUB_THRESHOLD;
@@ -2523,7 +2548,7 @@
         ctx.shadowBlur = 35;
 
         ctx.fillText(
-          gameMode === 'off' ? 'EFFONDREMENT DU VIDE' : 'IMPLOSION STELLAIRE',
+          gameMode === 'off' ? 'VOID COLLAPSE' : 'STELLAR IMPLOSION',
           cx, cy - finalFontSize * 1.1
         );
 
@@ -2533,8 +2558,8 @@
         ctx.shadowBlur = 15;
         ctx.fillText(
           gameMode === 'off'
-            ? 'Le n\u00E9ant se r\u00E9sorbe... tout dispara\u00EEt.'
-            : 'La lumi\u00E8re se consume... tout s\'\u00E9teint.',
+            ? 'The void consumes itself... everything vanishes.'
+            : 'The light burns out... everything fades.',
           cx, cy + finalFontSize * 0.15
         );
 
@@ -2570,7 +2595,7 @@
           ctx.fillStyle = 'rgba(255, 220, 120, ' + textAlpha + ')';
         }
         ctx.fillText(
-          gameMode === 'off' ? 'SURCHARGE OBSCURE' : 'SURCHARGE LUMINEUSE',
+          gameMode === 'off' ? 'DARK OVERLOAD' : 'LIGHT OVERLOAD',
           cx, cy - fontSize * 0.9
         );
 
@@ -2580,8 +2605,8 @@
         ctx.shadowBlur = 12;
         ctx.fillText(
           gameMode === 'off'
-            ? 'D\u00E9s\u00E9quilibre d\u00E9tect\u00E9 dans le vide'
-            : 'D\u00E9s\u00E9quilibre d\u00E9tect\u00E9 dans la lumi\u00E8re',
+            ? 'Imbalance detected in the void'
+            : 'Imbalance detected in the light',
           cx, cy + fontSize * 0.3
         );
 
@@ -2591,12 +2616,12 @@
           var levelMsg;
           if (acPenaltyCount === 2) {
             levelMsg = gameMode === 'off'
-              ? 'Le vide tremble'
-              : 'Le tissu lumineux se fissure';
+              ? 'The void trembles'
+              : 'The fabric of light fractures';
           } else {
             levelMsg = gameMode === 'off'
-              ? '\u00C9tat critique \u2014 le vide c\u00E8de'
-              : '\u00C9tat critique \u2014 la lumi\u00E8re vacille';
+              ? 'Critical state \u2014 the void yields'
+              : 'Critical state \u2014 the light falters';
           }
           ctx.fillText(levelMsg, cx, cy + fontSize * 0.3 + subSize * 1.4);
         }
@@ -2646,7 +2671,7 @@
     }, COMBO_DECAY);
 
     const multiplier = getComboMultiplier();
-    const gain = Math.floor(state.clickPower * multiplier);
+    const gain = Math.floor(state.clickPower * multiplier * prestigeMultiplier);
 
     state.lumens += gain;
     state.totalLumens += gain;
@@ -2654,6 +2679,18 @@
     addHalo(x, y);
     if (multiplier > 1) {
       showComboGlow(x, y, multiplier);
+      // Show combo text on canvas
+      halos.push({
+        type: 'combo-text',
+        x: x + (Math.random() - 0.5) * 30,
+        y: y - 20,
+        maxRadius: 0,
+        opacity: 0.9,
+        life: 1.0,
+        decay: 0.02,
+        delay: 0,
+        text: 'x' + multiplier,
+      });
     }
 
     // Lightning/Fissure: bolt animation + flash/darken
@@ -2760,10 +2797,7 @@
     renderUpgrades();
     updateUI();
 
-    // Auto-close if no more affordable upgrades
-    if (!hasAffordableUpgrade()) {
-      closeUpgradePanel();
-    }
+    // Panel stays open — player can close it manually
   }
 
   function hasAffordableUpgrade() {
@@ -2791,7 +2825,7 @@
     lumenCounter.textContent = formatNumber(Math.floor(state.lumens)) + ' ' + unit;
     upgradeList.innerHTML = '';
 
-    let nextShown = false; // only show one upcoming unpurchased upgrade
+    let nextShownCount = 0; // show up to 3 upcoming unpurchased upgrades
 
     for (const up of UPGRADES) {
       const count = getUpgradeCount(up.id);
@@ -2801,10 +2835,10 @@
       if (count === 0) {
         if (adminMode) {
           // show all upgrades in admin mode
-        } else if (!unlocked || nextShown) {
+        } else if (!unlocked || nextShownCount >= 3) {
           continue;
         } else {
-          nextShown = true;
+          nextShownCount++;
         }
       }
 
@@ -2832,7 +2866,7 @@
       if (up.type === 'passive') {
         effectLabel = '+' + formatNumber(up.value) + ' ' + unit + '/s';
       } else if (up.type === 'click') {
-        effectLabel = '+' + formatNumber(up.value) + ' per click';
+        effectLabel = '+' + formatNumber(up.value) + '/click';
       } else if (up.type === 'burst') {
         effectLabel = 'Spawns collectible orbs';
       } else if (up.type === 'victory') {
@@ -2860,11 +2894,66 @@
 
   // --- Milestones ---
   let upgradeUnlocked = false;
+  const MILESTONE_THRESHOLDS = [
+    100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000,
+    5000000, 10000000, 50000000, 100000000, 500000000, 1000000000,
+    10000000000, 100000000000, 500000000000, 1000000000000
+  ];
+  let lastMilestoneIndex = -1;
+  let activeMilestone = null;
 
   function checkMilestones() {
     if (!upgradeUnlocked && state.totalLumens >= 50) {
       upgradeUnlocked = true;
       upgradeToggle.classList.remove('hidden');
+    }
+    // Check for milestone thresholds
+    for (var i = MILESTONE_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (state.totalLumens >= MILESTONE_THRESHOLDS[i] && i > lastMilestoneIndex) {
+        lastMilestoneIndex = i;
+        activeMilestone = {
+          text: formatNumber(MILESTONE_THRESHOLDS[i]) + ' ' + unitName() + '!',
+          life: 1.0,
+          y: canvas.height * 0.3,
+        };
+        break;
+      }
+    }
+    updateToggleNotification();
+  }
+
+  function updateMilestone() {
+    if (!activeMilestone) return;
+    activeMilestone.life -= 0.008;
+    activeMilestone.y -= 0.3;
+    if (activeMilestone.life <= 0) activeMilestone = null;
+  }
+
+  function drawMilestone() {
+    if (!activeMilestone) return;
+    var m = activeMilestone;
+    ctx.save();
+    ctx.font = 'bold ' + Math.floor(Math.min(canvas.width * 0.04, 28)) + 'px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = rgba(255, 255, 255, m.life * 0.8);
+    ctx.fillText(m.text, canvas.width / 2, m.y);
+    ctx.restore();
+  }
+
+  // --- Upgrade toggle notification ---
+  function updateToggleNotification() {
+    var hasNew = false;
+    for (var i = 0; i < UPGRADES.length; i++) {
+      var up = UPGRADES[i];
+      var count = getUpgradeCount(up.id);
+      if (count >= up.maxCount) continue;
+      if (state.totalLumens < up.unlockAt) continue;
+      if (state.lumens >= getUpgradeCost(up)) { hasNew = true; break; }
+    }
+    if (hasNew) {
+      upgradeToggle.classList.add('has-new');
+    } else {
+      upgradeToggle.classList.remove('has-new');
     }
   }
 
@@ -2872,6 +2961,36 @@
   function updateUI() {
     const progress = Math.min(state.totalLumens / VICTORY_LUMENS, 1);
     progressFill.style.width = (progress * 100) + '%';
+    updateToggleNotification();
+  }
+
+  // --- HUD (drawn on canvas) ---
+  function drawHUD() {
+    if (state.victoryReached || state.sunPurchased || sunCinematicActive) return;
+    ctx.save();
+    var fontSize = Math.floor(Math.min(canvas.width * 0.025, 14));
+    ctx.font = fontSize + 'px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    var hudAlpha = 0.3;
+    ctx.fillStyle = rgba(255, 255, 255, hudAlpha);
+    var padding = 12;
+    var y = padding + fontSize + 44;
+    ctx.fillText(formatNumber(Math.floor(state.lumens)) + ' ' + unitName(), padding, y);
+    if (state.lumensPerSecond > 0) {
+      var lps = state.lumensPerSecond * prestigeMultiplier;
+      ctx.fillText('+' + formatNumber(Math.floor(lps)) + '/s', padding, y + fontSize + 4);
+    }
+    var mult = getComboMultiplier();
+    if (mult > 1) {
+      ctx.fillStyle = rgba(255, 255, 255, 0.5);
+      ctx.fillText('x' + mult, padding, y + (fontSize + 4) * 2);
+    }
+    if (prestigeLevel > 0) {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = rgba(255, 255, 255, 0.2);
+      ctx.fillText('P' + prestigeLevel + ' x' + prestigeMultiplier.toFixed(1), canvas.width - padding, y);
+    }
+    ctx.restore();
   }
 
   // --- Switch interaction ---
@@ -3057,6 +3176,8 @@
   // --- Victory ---
   function triggerVictory() {
     state.victoryReached = true;
+    var nextMult = 1 + (prestigeLevel + 1) * 0.5;
+    prestigeInfo.textContent = 'Cross over. x' + nextMult.toFixed(1) + ' power awaits.';
     victoryScreen.classList.remove('hidden');
     save();
   }
@@ -3066,17 +3187,41 @@
     e.stopPropagation();
     localStorage.removeItem(getSaveKey());
     localStorage.removeItem('light-game-mode');
-    // Reload to return to mode selection
     window.location.reload();
   });
 
-  // --- Reset button ---
+  // --- Prestige ---
+  prestigeBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    prestigeLevel++;
+    prestigeMultiplier = 1 + prestigeLevel * 0.5;
+    savePrestige();
+    localStorage.removeItem(getSaveKey());
+    var newMode = gameMode === 'on' ? 'off' : 'on';
+    localStorage.setItem('light-game-mode', newMode);
+    window.location.reload();
+  });
+
+  // --- Reset button (double-click confirmation) ---
   const resetBtn = document.getElementById('reset-btn');
+  let resetConfirmTimer = null;
   resetBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    localStorage.removeItem(getSaveKey());
-    localStorage.removeItem('light-game-mode');
-    window.location.reload();
+    if (resetBtn.classList.contains('confirming')) {
+      clearTimeout(resetConfirmTimer);
+      resetBtn.classList.remove('confirming');
+      resetBtn.textContent = 'Reset';
+      localStorage.removeItem(getSaveKey());
+      localStorage.removeItem('light-game-mode');
+      window.location.reload();
+    } else {
+      resetBtn.classList.add('confirming');
+      resetBtn.textContent = 'Sure?';
+      resetConfirmTimer = _st(function() {
+        resetBtn.classList.remove('confirming');
+        resetBtn.textContent = 'Reset';
+      }, 3000);
+    }
   });
 
   // --- Admin mode toggle ---
@@ -3172,7 +3317,8 @@
       b.life -= b.decay;
       b.pulse += 0.05;
       if (b.life <= 0) {
-        lightBursts.splice(i, 1);
+        lightBursts[i] = lightBursts[lightBursts.length - 1];
+        lightBursts.pop();
         continue;
       }
 
@@ -3582,7 +3728,8 @@
       }
 
       if (ray.life <= 0) {
-        prismRays.splice(i, 1);
+        prismRays[i] = prismRays[prismRays.length - 1];
+        prismRays.pop();
       }
     }
   }
@@ -3990,7 +4137,8 @@
       }
       bolt.life -= bolt.decay;
       if (bolt.life <= 0) {
-        lightningBolts.splice(i, 1);
+        lightningBolts[i] = lightningBolts[lightningBolts.length - 1];
+        lightningBolts.pop();
       }
     }
   }
@@ -4082,7 +4230,7 @@
   function passiveTick() {
     if (state.victoryReached || state.sunPurchased) return;
     if (state.lumensPerSecond > 0) {
-      const gain = state.lumensPerSecond / 10; // called 10x per sec
+      const gain = (state.lumensPerSecond * prestigeMultiplier) / 10; // called 10x per sec
       state.lumens += gain;
       state.totalLumens += gain;
       checkMilestones();
@@ -4100,6 +4248,7 @@
       victoryReached: state.victoryReached,
       sunPurchased: state.sunPurchased,
       acPenaltyCount: acPenaltyCount,
+      lastSaveTime: _now(),
     };
     try {
       localStorage.setItem(getSaveKey(), JSON.stringify(data));
@@ -4127,7 +4276,38 @@
       updateUI();
       renderUpgrades();
 
+      // --- Offline earnings ---
+      var savedTime = data.lastSaveTime || 0;
+      if (savedTime > 0 && state.lumensPerSecond > 0 && !state.victoryReached) {
+        var elapsed = (_now() - savedTime) / 1000;
+        var maxOffline = 3600;
+        elapsed = Math.min(elapsed, maxOffline);
+        if (elapsed > 10) {
+          var offlineGain = Math.floor(state.lumensPerSecond * elapsed * 0.5 * prestigeMultiplier);
+          if (offlineGain > 0) {
+            state.lumens += offlineGain;
+            state.totalLumens += offlineGain;
+            updateUI();
+            var offlinePopup = document.getElementById('offline-popup');
+            var offlineText = document.getElementById('offline-text');
+            offlineText.textContent = 'While you were away... +' + formatNumber(offlineGain) + ' ' + unitName();
+            offlinePopup.classList.remove('hidden');
+            offlinePopup.addEventListener('click', function dismissOffline() {
+              offlinePopup.classList.add('fade-out');
+              _st(function() { offlinePopup.classList.add('hidden'); offlinePopup.classList.remove('fade-out'); }, 600);
+              offlinePopup.removeEventListener('click', dismissOffline);
+            });
+            _st(function() {
+              offlinePopup.classList.add('fade-out');
+              _st(function() { offlinePopup.classList.add('hidden'); offlinePopup.classList.remove('fade-out'); }, 600);
+            }, 4000);
+          }
+        }
+      }
+
       if (state.victoryReached) {
+        var nextMult = 1 + (prestigeLevel + 1) * 0.5;
+        prestigeInfo.textContent = 'Cross over. x' + nextMult.toFixed(1) + ' power awaits.';
         victoryScreen.classList.remove('hidden');
       } else if (state.sunPurchased) {
         upgradeToggle.classList.add('hidden');
@@ -4150,7 +4330,6 @@
   // --- Game loop ---
   function gameLoop() {
     // Update systems
-    regenerateStars();
     updateStars();
     updatePulsar();
     updateConstellations();
@@ -4166,14 +4345,15 @@
     checkBurstSpawn();
     checkRaySpawn();
     updateAcExplosion();
+    updateMilestone();
 
-    // Clear canvas then draw (back to front)
-    if (gameMode === 'off') {
-      // In off mode, canvas must be transparent (white body shows through)
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    } else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    // Cap halos to prevent unbounded growth
+    if (halos.length > 200) halos.splice(0, halos.length - 200);
+
+    // Clear canvas (transparent — background shows through)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw (back to front)
     drawStars();
     drawConstellations();
     drawHalos();
@@ -4183,6 +4363,8 @@
     drawPrismRays();
     drawLightBursts();
     drawPulsar();
+    drawMilestone();
+    drawHUD();
     drawAcExplosion();
     _raf(gameLoop);
   }
