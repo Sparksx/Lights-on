@@ -2568,19 +2568,20 @@
           cx, cy + fontSize * 0.3
         );
 
-        // Instability counter + warning for next threshold
+        // Instability level — escalating urgency, no prediction
         if (acPenaltyCount > 1) {
           ctx.font = Math.floor(subSize * 0.8) + 'px "Courier New", Courier, monospace';
-          var strikesLeft = AC_MAX_STRIKES - acPenaltyCount;
-          var warningMsg = gameMode === 'off'
-            ? 'Fracture ' + acPenaltyCount + '/' + AC_MAX_STRIKES
-            : 'Instabilit\u00E9 ' + acPenaltyCount + '/' + AC_MAX_STRIKES;
-          if (strikesLeft <= 1) {
-            warningMsg += gameMode === 'off'
-              ? ' \u2014 prochaine : effondrement'
-              : ' \u2014 prochaine : implosion';
+          var levelMsg;
+          if (acPenaltyCount === 2) {
+            levelMsg = gameMode === 'off'
+              ? 'Le vide tremble'
+              : 'Le tissu lumineux se fissure';
+          } else {
+            levelMsg = gameMode === 'off'
+              ? '\u00C9tat critique \u2014 le vide c\u00E8de'
+              : '\u00C9tat critique \u2014 la lumi\u00E8re vacille';
           }
-          ctx.fillText(warningMsg, cx, cy + fontSize * 0.3 + subSize * 1.4);
+          ctx.fillText(levelMsg, cx, cy + fontSize * 0.3 + subSize * 1.4);
         }
       }
 
