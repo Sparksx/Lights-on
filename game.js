@@ -12,7 +12,7 @@
   // --- Prestige ---
   var prestigeLevel = 0;
   var prestigeMultiplier = 1;
-  var PRESTIGE_SAVE_KEY = 'light-prestige';
+  const PRESTIGE_SAVE_KEY = 'light-prestige';
 
   function loadPrestige() {
     try {
@@ -831,7 +831,6 @@
   function endConstellationDrag() {
     constellationDragActive = false;
     constellationDragPath = [];
-    constellationTracedEdges = [];
   }
 
   // --- Pulsar spinning star system (upgrade #11) ---
@@ -1621,6 +1620,7 @@
   }
 
   function updateHalos() {
+    if (halos.length > 200) halos.splice(0, halos.length - 200);
     for (let i = halos.length - 1; i >= 0; i--) {
       const h = halos[i];
 
@@ -2974,7 +2974,7 @@
     var hudAlpha = 0.3;
     ctx.fillStyle = rgba(255, 255, 255, hudAlpha);
     var padding = 12;
-    var y = padding + fontSize + 44;
+    var y = padding + fontSize + (window.CSS && CSS.supports('top', 'env(safe-area-inset-top)') ? 44 : 0);
     ctx.fillText(formatNumber(Math.floor(state.lumens)) + ' ' + unitName(), padding, y);
     if (state.lumensPerSecond > 0) {
       var lps = state.lumensPerSecond * prestigeMultiplier;
@@ -4290,7 +4290,7 @@
             updateUI();
             var offlinePopup = document.getElementById('offline-popup');
             var offlineText = document.getElementById('offline-text');
-            offlineText.textContent = 'While you were away... +' + formatNumber(offlineGain) + ' ' + unitName();
+            offlineText.textContent = 'While you were away...\n+' + formatNumber(offlineGain) + ' ' + unitName();
             offlinePopup.classList.remove('hidden');
             offlinePopup.addEventListener('click', function dismissOffline() {
               offlinePopup.classList.add('fade-out');
@@ -4346,9 +4346,6 @@
     checkRaySpawn();
     updateAcExplosion();
     updateMilestone();
-
-    // Cap halos to prevent unbounded growth
-    if (halos.length > 200) halos.splice(0, halos.length - 200);
 
     // Clear canvas (transparent — background shows through)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
