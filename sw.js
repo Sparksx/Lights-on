@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lights-on-v3';
+const CACHE_NAME = 'lights-on-v4';
 const ASSETS = [
   './',
   './index.html',
