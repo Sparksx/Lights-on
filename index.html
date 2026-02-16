@@ -18,6 +18,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Socket.io client (auto-served by the server) -->
+  <script src="/socket.io/socket.io.js" defer></script>
   <!-- MODE SELECTION LANDING PAGE -->
   <div id="mode-select">
     <div id="mode-on" class="mode-half mode-half-dark">
@@ -27,6 +29,32 @@
       <div class="mode-label">OFF</div>
     </div>
     <div id="mode-title">LIGHT</div>
+  </div>
+
+  <!-- MULTIPLAYER UI -->
+  <div id="mp-bar" class="hidden">
+    <div id="mp-user">
+      <div id="mp-login-btns">
+        <button id="mp-google-btn" class="mp-login" onclick="location.href='/auth/google'">Google</button>
+        <button id="mp-discord-btn" class="mp-login" onclick="location.href='/auth/discord'">Discord</button>
+      </div>
+      <div id="mp-profile" class="hidden">
+        <img id="mp-avatar" src="" alt="">
+        <span id="mp-name"></span>
+        <button id="mp-logout" class="mp-login">&#x2715;</button>
+      </div>
+    </div>
+    <div id="mp-cosmic">
+      <div id="cosmic-bar">
+        <div id="cosmic-light"></div>
+        <div id="cosmic-dark"></div>
+      </div>
+      <div id="cosmic-labels">
+        <span id="cosmic-light-count">0</span>
+        <span id="cosmic-online">0 online</span>
+        <span id="cosmic-dark-count">0</span>
+      </div>
+    </div>
   </div>
 
   <div id="game-area" class="hidden">

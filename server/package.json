@@ -1,0 +1,22 @@
+{
+  "name": "lights-on-server",
+  "version": "1.0.0",
+  "description": "Multiplayer backend for Lights-on",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "socket.io": "^4.8.0",
+    "pg": "^8.13.0",
+    "express-session": "^1.18.0",
+    "connect-pg-simple": "^10.0.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-discord": "^0.1.4",
+    "dotenv": "^16.4.0",
+    "cors": "^2.8.5"
+  }
+}

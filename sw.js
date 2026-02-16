@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lights-on-v7';
+const CACHE_NAME = 'lights-on-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
   './js/victory.js',
   './js/intro.js',
   './js/game-loop.js',
+  './js/multiplayer.js',
   './js/effects/halos.js',
   './js/effects/stars.js',
   './js/effects/constellations.js',
@@ -30,6 +31,9 @@ const ASSETS = [
   './icons/icon-192.svg',
   './manifest.json'
 ];
+
+// Routes that should never be cached (API, auth, websocket)
+const NO_CACHE_PATTERNS = ['/api/', '/auth/', '/socket.io/'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -50,6 +54,13 @@ self.addEventListener('activate', (e) => {
 // Network-first strategy: always try to fetch from network,
 // update cache with fresh response, fall back to cache if offline.
 self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+
+  // Never cache API, auth, or socket.io requests
+  if (NO_CACHE_PATTERNS.some((p) => url.pathname.startsWith(p))) {
+    return;
+  }
+
   e.respondWith(
     fetch(e.request)
       .then((response) => {
