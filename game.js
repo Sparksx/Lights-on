@@ -3,6 +3,12 @@
 (function () {
   'use strict';
 
+  // --- Protected native references (anti-tampering) ---
+  var _raf = window.requestAnimationFrame.bind(window);
+  var _si = window.setInterval.bind(window);
+  var _st = window.setTimeout.bind(window);
+  var _now = Date.now.bind(Date);
+
   // --- Game Mode ---
   // 'on' = classic (dark→light), 'off' = inverted (light→dark)
   let gameMode = null; // set by landing page
@@ -45,7 +51,7 @@
     try { localStorage.setItem('light-game-mode', mode); } catch(_) {}
 
     // After animation, reveal the game
-    setTimeout(function () {
+    _st(function () {
       modeSelect.style.display = 'none';
       document.getElementById('game-area').classList.remove('hidden');
       resizeCanvas();
@@ -514,7 +520,7 @@
   ];
 
   const activeConstellations = [];
-  let nextConstellationTime = Date.now() + 5000;
+  let nextConstellationTime = _now() + 5000;
   let constellationDragActive = false;
   let constellationDragPath = []; // {x, y} points the user has dragged through
   let constellationTracedEdges = []; // edges already validated in current drag
@@ -559,11 +565,11 @@
   function checkConstellationSpawn() {
     if (getUpgradeCount('constellation') === 0) return;
     if (getUpgradeCount('star') === 0) return; // need stars first
-    if (Date.now() < nextConstellationTime) return;
+    if (_now() < nextConstellationTime) return;
     spawnConstellation();
     const constellationCount = getUpgradeCount('constellation');
     const interval = Math.max(8000, 20000 - constellationCount * 1500);
-    nextConstellationTime = Date.now() + interval + Math.random() * interval * 0.5;
+    nextConstellationTime = _now() + interval + Math.random() * interval * 0.5;
   }
 
   function updateConstellations() {
@@ -968,7 +974,7 @@
   let bigBangPhase = 0; // 0=idle, 1=implosion, 2=explosion
   let bigBangProgress = 0;
   let bigBangParticles = [];
-  let nextBigBangTime = Date.now() + 30000 + Math.random() * 30000;
+  let nextBigBangTime = _now() + 30000 + Math.random() * 30000;
 
   function checkBigBangSpawn() {
     // In off mode, use black hole effect instead
@@ -977,12 +983,12 @@
     if (bbCount === 0) return;
     if (bigBangActive) return;
     if (state.victoryReached || state.sunPurchased) return;
-    if (Date.now() < nextBigBangTime) return;
+    if (_now() < nextBigBangTime) return;
 
     startBigBang();
     // Interval: 25-60 seconds, faster with more upgrades
     const interval = Math.max(15000, 40000 - bbCount * 3000);
-    nextBigBangTime = Date.now() + interval + Math.random() * interval * 0.5;
+    nextBigBangTime = _now() + interval + Math.random() * interval * 0.5;
   }
 
   function startBigBang() {
@@ -1175,7 +1181,7 @@
   let blackHoleParticles = [];
   let blackHoleRadius = 0;
   let blackHoleRotation = 0;
-  let nextBlackHoleTime = Date.now() + 30000 + Math.random() * 30000;
+  let nextBlackHoleTime = _now() + 30000 + Math.random() * 30000;
 
   function checkBlackHoleSpawn() {
     if (gameMode !== 'off') return;
@@ -1183,11 +1189,11 @@
     if (bbCount === 0) return;
     if (blackHoleActive) return;
     if (state.victoryReached || state.sunPurchased) return;
-    if (Date.now() < nextBlackHoleTime) return;
+    if (_now() < nextBlackHoleTime) return;
 
     startBlackHole();
     const interval = Math.max(15000, 40000 - bbCount * 3000);
-    nextBlackHoleTime = Date.now() + interval + Math.random() * interval * 0.5;
+    nextBlackHoleTime = _now() + interval + Math.random() * interval * 0.5;
   }
 
   function startBlackHole() {
@@ -2056,12 +2062,14 @@
   }
 
   // --- Anti Auto-Clicker Detection ---
-  var AC_BUFFER_SIZE = 30;           // number of clicks to track
-  var AC_MIN_AVG_INTERVAL = 45;      // ms — avg interval below this is too fast
+  var AC_BUFFER_SIZE = 40;           // number of clicks to track
+  var AC_MIN_AVG_INTERVAL = 35;      // ms — avg interval below this is too fast
   var AC_REGULARITY_THRESHOLD = 12;  // ms — std deviation below this is suspiciously regular
   var AC_SAME_POS_RADIUS = 3;        // px — clicks within this radius count as same spot
   var AC_PENALTY_DURATION = 7000;    // ms — penalty blocks gameplay for 7 seconds
-  var AC_DETECTION_MIN_CLICKS = 20;  // need this many clicks before analyzing
+  var AC_DETECTION_MIN_CLICKS = 12;  // need this many clicks before analyzing
+  var AC_BURST_WINDOW = 1000;        // ms — sliding window for burst detection
+  var AC_BURST_THRESHOLD = 22;       // max clicks allowed within burst window
 
   var acClickTimes = [];
   var acClickPositions = [];
@@ -2074,7 +2082,7 @@
   var acResetScheduled = false;      // true = save will be wiped when penalty ends
 
   function acRecordClick(x, y) {
-    acClickTimes.push(Date.now());
+    acClickTimes.push(_now());
     acClickPositions.push({ x: x, y: y });
     if (acClickTimes.length > AC_BUFFER_SIZE) {
       acClickTimes.shift();
@@ -2084,6 +2092,15 @@
 
   function acDetect() {
     if (acClickTimes.length < AC_DETECTION_MIN_CLICKS) return false;
+
+    // Burst detection — too many clicks in a short window
+    var now = _now();
+    var burstCount = 0;
+    for (var b = acClickTimes.length - 1; b >= 0; b--) {
+      if (now - acClickTimes[b] <= AC_BURST_WINDOW) burstCount++;
+      else break;
+    }
+    if (burstCount >= AC_BURST_THRESHOLD) return true;
 
     // Compute intervals
     var intervals = [];
@@ -2136,7 +2153,7 @@
 
     // Escalate duration: 7s, 10s, 13s, and final = 12s (dramatic wipe)
     var duration = isFinal ? 12000 : AC_PENALTY_DURATION + (acPenaltyCount - 1) * 3000;
-    acPenaltyStart = Date.now();
+    acPenaltyStart = _now();
     acWarningOpacity = 1.0;
     acExplosionParticles = [];
 
@@ -2238,7 +2255,7 @@
 
   function acIsPenaltyActive() {
     if (acPenaltyActive === false) return false;
-    var elapsed = Date.now() - acPenaltyStart;
+    var elapsed = _now() - acPenaltyStart;
     var duration = acGetPenaltyDuration();
     if (elapsed >= duration) {
       acPenaltyActive = false;
@@ -2261,7 +2278,7 @@
   function updateAcExplosion() {
     if (!acIsPenaltyActive()) return;
 
-    var elapsed = Date.now() - acPenaltyStart;
+    var elapsed = _now() - acPenaltyStart;
 
     for (var i = acExplosionParticles.length - 1; i >= 0; i--) {
       var p = acExplosionParticles[i];
@@ -2317,7 +2334,7 @@
   function drawAcExplosion() {
     if (!acIsPenaltyActive()) return;
 
-    var elapsed = Date.now() - acPenaltyStart;
+    var elapsed = _now() - acPenaltyStart;
     var cx = canvas.width / 2;
     var cy = canvas.height / 2;
 
@@ -2597,6 +2614,9 @@
   function handleClick(e) {
     if (state.victoryReached || state.sunPurchased || sunCinematicActive) return;
 
+    // Block synthetic/programmatic events (only allow real user input)
+    if (!e.isTrusted && !e._trustedTouch) return;
+
     // Block all clicks during auto-clicker penalty
     if (acIsPenaltyActive()) return;
 
@@ -2621,7 +2641,7 @@
     // Combo tracking
     comboCount++;
     if (comboTimer) clearTimeout(comboTimer);
-    comboTimer = setTimeout(function () {
+    comboTimer = _st(function () {
       comboCount = 0;
     }, COMBO_DECAY);
 
@@ -2696,7 +2716,7 @@
     startRub(touch.clientX, touch.clientY);
     startPrismHold(touch.clientX, touch.clientY);
     startConstellationDrag(touch.clientX, touch.clientY);
-    handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target });
+    handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target, _trustedTouch: e.isTrusted });
   }, { passive: false });
 
   // --- Upgrade system ---
@@ -2878,7 +2898,7 @@
     }
 
     // Start the sun cinematic after a brief pause
-    setTimeout(function () {
+    _st(function () {
       switchContainer.classList.add('hidden');
       playSunCinematic();
     }, 600);
@@ -3017,13 +3037,13 @@
           cinCtx.fill();
         }
 
-        requestAnimationFrame(animateCinematic);
+        _raf(animateCinematic);
       } else {
         // Cinematic done — fill then show victory
         cinCtx.fillStyle = fillEnd;
         cinCtx.fillRect(0, 0, cinCanvas.width, cinCanvas.height);
 
-        setTimeout(function () {
+        _st(function () {
           cinCanvas.remove();
           sunCinematicActive = false;
           triggerVictory();
@@ -3031,7 +3051,7 @@
       }
     }
 
-    requestAnimationFrame(animateCinematic);
+    _raf(animateCinematic);
   }
 
   // --- Victory ---
@@ -3096,7 +3116,7 @@
 
   // --- Light burst events (collectible orbs) ---
   const lightBursts = [];
-  let nextBurstTime = Date.now() + 8000 + Math.random() * 12000;
+  let nextBurstTime = _now() + 8000 + Math.random() * 12000;
 
   function spawnLightBurst() {
     const margin = 60;
@@ -3139,9 +3159,9 @@
     const maxBursts = 3 + Math.floor(cometCount / 2);
     const baseInterval = Math.max(5000, 10000 - cometCount * 250);
     const randomExtra = Math.max(3000, 15000 - cometCount * 500);
-    if (Date.now() >= nextBurstTime && lightBursts.length < maxBursts) {
+    if (_now() >= nextBurstTime && lightBursts.length < maxBursts) {
       spawnLightBurst();
-      nextBurstTime = Date.now() + baseInterval + Math.random() * randomExtra;
+      nextBurstTime = _now() + baseInterval + Math.random() * randomExtra;
     }
   }
 
@@ -3398,7 +3418,7 @@
 
   // --- Prism ray mechanic ---
   const prismRays = [];
-  let nextRayTime = Date.now() + 15000 + Math.random() * 20000;
+  let nextRayTime = _now() + 15000 + Math.random() * 20000;
   let prismHolding = false;
   let prismHoldX = 0;
   let prismHoldY = 0;
@@ -3470,12 +3490,12 @@
   function checkRaySpawn() {
     if (state.victoryReached || state.sunPurchased) return;
     if (getUpgradeCount('prism') === 0) return;
-    if (Date.now() >= nextRayTime && prismRays.length < 2) {
+    if (_now() >= nextRayTime && prismRays.length < 2) {
       spawnPrismRay();
       // More prisms = more frequent rays
       const prismCount = getUpgradeCount('prism');
       const interval = Math.max(8000, 20000 - prismCount * 800);
-      nextRayTime = Date.now() + interval + Math.random() * interval * 0.5;
+      nextRayTime = _now() + interval + Math.random() * interval * 0.5;
     }
   }
 
@@ -4164,7 +4184,7 @@
     drawLightBursts();
     drawPulsar();
     drawAcExplosion();
-    requestAnimationFrame(gameLoop);
+    _raf(gameLoop);
   }
 
   // --- Intro animation (new game only) ---
@@ -4189,7 +4209,7 @@
       dismissed = true;
       introOverlay.removeEventListener('click', dismissIntro);
       introOverlay.classList.add('fade-out');
-      setTimeout(function () {
+      _st(function () {
         introOverlay.classList.add('hidden');
         introOverlay.classList.remove('fade-out');
         onDone();
@@ -4198,7 +4218,7 @@
 
     // Dismiss on click/tap, or auto-dismiss after 5s
     introOverlay.addEventListener('click', dismissIntro);
-    setTimeout(dismissIntro, 5000);
+    _st(dismissIntro, 5000);
   }
 
   // --- Init (called after mode selection) ---
@@ -4207,9 +4227,9 @@
     load();
     updateUI();
     gameLoop();
-    setInterval(passiveTick, 100);
-    setInterval(save, 5000); // auto-save every 5s
-    setInterval(function () {
+    _si(passiveTick, 100);
+    _si(save, 5000); // auto-save every 5s
+    _si(function () {
       if (upgradePanel.classList.contains('open')) {
         renderUpgrades();
       }
