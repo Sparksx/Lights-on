@@ -13,6 +13,7 @@ import { showIntro } from './intro.js';
 import { setupInputListeners } from './click.js';
 import { showSwitch, setupVictoryListeners } from './victory.js';
 import { regenerateStars } from './effects/stars.js';
+import { initMultiplayer, mp, onMultiplayerUpdate, notifySideChange } from './multiplayer.js';
 
 function startGame(mode) {
   if (gameStarted) return;
@@ -131,8 +132,8 @@ function initGame() {
 }
 
 // --- Mode selection ---
-modeOn.addEventListener('click', function () { startGame('on'); });
-modeOff.addEventListener('click', function () { startGame('off'); });
+modeOn.addEventListener('click', function () { startGame('on'); notifySideChange('on'); });
+modeOff.addEventListener('click', function () { startGame('off'); notifySideChange('off'); });
 
 // Check for saved game — skip landing if save exists
 (function checkSavedGame() {
@@ -148,4 +149,82 @@ modeOff.addEventListener('click', function () { startGame('off'); });
       startGame('on');
     }
   } catch (_) {}
+})();
+
+// --- Multiplayer UI ---
+var mpBar = document.getElementById('mp-bar');
+var mpLoginBtns = document.getElementById('mp-login-btns');
+var mpProfile = document.getElementById('mp-profile');
+var mpAvatar = document.getElementById('mp-avatar');
+var mpName = document.getElementById('mp-name');
+var mpLogout = document.getElementById('mp-logout');
+var cosmicLight = document.getElementById('cosmic-light');
+var cosmicDark = document.getElementById('cosmic-dark');
+var cosmicLightCount = document.getElementById('cosmic-light-count');
+var cosmicDarkCount = document.getElementById('cosmic-dark-count');
+var cosmicOnline = document.getElementById('cosmic-online');
+
+function formatShort(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
+function updateMultiplayerUI(state) {
+  // Auth
+  if (state.user) {
+    mpLoginBtns.classList.add('hidden');
+    mpProfile.classList.remove('hidden');
+    mpName.textContent = state.user.displayName;
+    if (state.user.avatar) {
+      mpAvatar.src = state.user.avatar;
+      mpAvatar.style.display = '';
+    } else {
+      mpAvatar.style.display = 'none';
+    }
+  } else {
+    mpLoginBtns.classList.remove('hidden');
+    mpProfile.classList.add('hidden');
+  }
+
+  // Cosmic war gauge
+  var light = state.cosmicWar.totalLight;
+  var dark = state.cosmicWar.totalDark;
+  var total = light + dark;
+  if (total > 0) {
+    cosmicLight.style.width = ((light / total) * 100) + '%';
+    cosmicDark.style.width = ((dark / total) * 100) + '%';
+  } else {
+    cosmicLight.style.width = '50%';
+    cosmicDark.style.width = '50%';
+  }
+  cosmicLightCount.textContent = formatShort(light);
+  cosmicDarkCount.textContent = formatShort(dark);
+
+  // Online count
+  cosmicOnline.textContent = state.online.total + ' online';
+}
+
+onMultiplayerUpdate(updateMultiplayerUI);
+
+mpLogout.addEventListener('click', function (e) {
+  e.stopPropagation();
+  fetch('/auth/logout', { method: 'POST' }).then(function () {
+    mp.user = null;
+    updateMultiplayerUI(mp);
+  });
+});
+
+// Show multiplayer bar once game starts, init connection
+var origStartGame = startGame;
+(function initMP() {
+  initMultiplayer().then(function () {
+    mpBar.classList.remove('hidden');
+    updateMultiplayerUI(mp);
+  }).catch(function () {
+    // Server not available (local dev without server) — hide mp bar
+    mpBar.classList.add('hidden');
+  });
 })();

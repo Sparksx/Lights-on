@@ -902,3 +902,157 @@ body.mode-off #reset-btn.confirming {
   border-color: rgba(200, 50, 50, 0.8);
   color: rgba(200, 50, 50, 0.8);
 }
+
+/* === MULTIPLAYER BAR === */
+#mp-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 90;
+  padding: 6px 12px;
+  padding-top: calc(6px + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  gap: 12px;
+}
+
+#mp-bar > * {
+  pointer-events: auto;
+}
+
+/* --- Auth area --- */
+#mp-user {
+  flex-shrink: 0;
+}
+
+.mp-login {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.5);
+  padding: 4px 10px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.6rem;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: border-color 0.2s, color 0.2s;
+  text-decoration: none;
+}
+
+.mp-login:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+#mp-login-btns {
+  display: flex;
+  gap: 6px;
+}
+
+#mp-profile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#mp-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+#mp-name {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+#mp-logout {
+  padding: 2px 6px;
+  font-size: 0.6rem;
+  border: none;
+  opacity: 0.3;
+}
+
+#mp-logout:hover {
+  opacity: 0.8;
+}
+
+/* --- Cosmic War gauge --- */
+#mp-cosmic {
+  flex: 1;
+  max-width: 300px;
+}
+
+#cosmic-bar {
+  width: 100%;
+  height: 3px;
+  display: flex;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#cosmic-light {
+  height: 100%;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transition: width 0.5s ease;
+}
+
+#cosmic-dark {
+  height: 100%;
+  width: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: width 0.5s ease;
+}
+
+#cosmic-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  opacity: 0.35;
+  margin-top: 2px;
+}
+
+#cosmic-online {
+  opacity: 0.6;
+}
+
+/* --- Mode OFF overrides --- */
+body.mode-off .mp-login {
+  border-color: rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+body.mode-off .mp-login:hover {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+body.mode-off #mp-name {
+  color: #000;
+}
+
+body.mode-off #mp-logout {
+  color: #000;
+}
+
+body.mode-off #cosmic-bar {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+body.mode-off #cosmic-light {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+body.mode-off #cosmic-dark {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+body.mode-off #cosmic-labels {
+  color: #000;
+}
