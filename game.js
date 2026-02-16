@@ -2506,15 +2506,20 @@
         ctx.shadowBlur = 35;
 
         ctx.fillText(
-          gameMode === 'off' ? 'ANNIHILATION' : 'COMBUSTION TOTALE',
+          gameMode === 'off' ? 'EFFONDREMENT DU VIDE' : 'IMPLOSION STELLAIRE',
           cx, cy - finalFontSize * 1.1
         );
 
-        // Sub-text: warning about wipe
+        // Sub-text
         var subSize = Math.floor(finalFontSize * 0.38);
         ctx.font = 'bold ' + subSize + 'px "Courier New", Courier, monospace';
         ctx.shadowBlur = 15;
-        ctx.fillText('Trop de triche. Progression effac\u00E9e.', cx, cy + finalFontSize * 0.15);
+        ctx.fillText(
+          gameMode === 'off'
+            ? 'Le n\u00E9ant se r\u00E9sorbe... tout dispara\u00EEt.'
+            : 'La lumi\u00E8re se consume... tout s\'\u00E9teint.',
+          cx, cy + finalFontSize * 0.15
+        );
 
         // Countdown to reload (appears after initial explosion)
         if (elapsed > 3000) {
@@ -2556,15 +2561,24 @@
         var subSize = Math.floor(fontSize * 0.45);
         ctx.font = subSize + 'px "Courier New", Courier, monospace';
         ctx.shadowBlur = 12;
-        ctx.fillText('Clic automatique d\u00E9tect\u00E9', cx, cy + fontSize * 0.3);
+        ctx.fillText(
+          gameMode === 'off'
+            ? 'D\u00E9s\u00E9quilibre d\u00E9tect\u00E9 dans le vide'
+            : 'D\u00E9s\u00E9quilibre d\u00E9tect\u00E9 dans la lumi\u00E8re',
+          cx, cy + fontSize * 0.3
+        );
 
-        // Penalty counter + remaining strikes warning
+        // Instability counter + warning for next threshold
         if (acPenaltyCount > 1) {
           ctx.font = Math.floor(subSize * 0.8) + 'px "Courier New", Courier, monospace';
           var strikesLeft = AC_MAX_STRIKES - acPenaltyCount;
-          var warningMsg = 'Avertissement ' + acPenaltyCount + '/' + AC_MAX_STRIKES;
+          var warningMsg = gameMode === 'off'
+            ? 'Fracture ' + acPenaltyCount + '/' + AC_MAX_STRIKES
+            : 'Instabilit\u00E9 ' + acPenaltyCount + '/' + AC_MAX_STRIKES;
           if (strikesLeft <= 1) {
-            warningMsg += ' \u2014 prochain = reset total';
+            warningMsg += gameMode === 'off'
+              ? ' \u2014 prochaine : effondrement'
+              : ' \u2014 prochaine : implosion';
           }
           ctx.fillText(warningMsg, cx, cy + fontSize * 0.3 + subSize * 1.4);
         }
