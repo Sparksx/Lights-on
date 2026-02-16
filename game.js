@@ -2070,6 +2070,8 @@
   var acExplosionParticles = [];
   var acWarningOpacity = 0;
   var acPenaltyCount = 0;            // escalates penalty duration
+  var AC_MAX_STRIKES = 4;            // after this many strikes, reset save
+  var acResetScheduled = false;      // true = save will be wiped when penalty ends
 
   function acRecordClick(x, y) {
     acClickTimes.push(Date.now());
@@ -2124,24 +2126,33 @@
   function acTriggerPenalty() {
     acPenaltyActive = true;
     acPenaltyCount++;
-    // Escalate duration for repeat offenders (7s, 10s, 14s, ...)
-    var duration = AC_PENALTY_DURATION + (acPenaltyCount - 1) * 3000;
-    acPenaltyStart = Date.now();
-    acWarningOpacity = 1.0;
-    acExplosionParticles = [];
     acClickTimes = [];
     acClickPositions = [];
     comboCount = 0;
 
+    // 4th strike = final — schedule save reset
+    var isFinal = acPenaltyCount >= AC_MAX_STRIKES;
+    acResetScheduled = isFinal;
+
+    // Escalate duration: 7s, 10s, 13s, and final = 12s (dramatic wipe)
+    var duration = isFinal ? 12000 : AC_PENALTY_DURATION + (acPenaltyCount - 1) * 3000;
+    acPenaltyStart = Date.now();
+    acWarningOpacity = 1.0;
+    acExplosionParticles = [];
+
     var cx = canvas.width / 2;
     var cy = canvas.height / 2;
 
+    // Final strike = much bigger explosion
+    var particleCount = isFinal ? 500 : 250;
+    var speedMult = isFinal ? 1.8 : 1;
+    var sizeMult = isFinal ? 1.5 : 1;
+
     // --- Create intense explosion particles ---
-    var particleCount = 250;
     for (var i = 0; i < particleCount; i++) {
       var angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.4;
-      var speed = 1.5 + Math.random() * 10;
-      var size = 3 + Math.random() * 14;
+      var speed = (1.5 + Math.random() * 10) * speedMult;
+      var size = (3 + Math.random() * 14) * sizeMult;
       acExplosionParticles.push({
         x: cx,
         y: cy,
@@ -2149,49 +2160,76 @@
         vy: Math.sin(angle) * speed,
         size: size,
         life: 1.0,
-        decay: 0.002 + Math.random() * 0.004,
+        decay: isFinal ? 0.001 + Math.random() * 0.003 : 0.002 + Math.random() * 0.004,
         rotation: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 0.2,
-        hue: Math.random() * 60,
+        hue: isFinal ? Math.random() * 360 : Math.random() * 60,
         trail: [],
       });
     }
 
     // Debris chunks
-    for (var d = 0; d < 30; d++) {
+    var debrisCount = isFinal ? 80 : 30;
+    for (var d = 0; d < debrisCount; d++) {
       var dAngle = Math.random() * Math.PI * 2;
-      var dSpeed = 3 + Math.random() * 6;
+      var dSpeed = (3 + Math.random() * 6) * speedMult;
       acExplosionParticles.push({
         type: 'debris',
         x: cx + (Math.random() - 0.5) * 40,
         y: cy + (Math.random() - 0.5) * 40,
         vx: Math.cos(dAngle) * dSpeed,
         vy: Math.sin(dAngle) * dSpeed + Math.random() * 2,
-        size: 6 + Math.random() * 10,
+        size: (6 + Math.random() * 10) * sizeMult,
         life: 1.0,
-        decay: 0.004 + Math.random() * 0.003,
+        decay: isFinal ? 0.002 + Math.random() * 0.002 : 0.004 + Math.random() * 0.003,
         rotation: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 0.3,
       });
     }
 
     // Shockwave rings
-    for (var r = 0; r < 6; r++) {
+    var ringCount = isFinal ? 10 : 6;
+    for (var r = 0; r < ringCount; r++) {
       acExplosionParticles.push({
         type: 'shockwave',
         x: cx,
         y: cy,
         radius: 0,
-        maxRadius: Math.max(canvas.width, canvas.height) * 0.8,
-        speed: 4 + r * 2.5,
+        maxRadius: Math.max(canvas.width, canvas.height) * (isFinal ? 1.2 : 0.8),
+        speed: (4 + r * 2.5) * (isFinal ? 1.3 : 1),
         life: 1.0,
-        decay: 0.007,
-        delay: r * 6,
+        decay: isFinal ? 0.004 : 0.007,
+        delay: r * (isFinal ? 4 : 6),
       });
     }
 
-    // Store actual penalty end time
+    // Final strike: secondary implosion wave after 2s
+    if (isFinal) {
+      for (var w = 0; w < 60; w++) {
+        var wAngle = Math.random() * Math.PI * 2;
+        var wDist = 300 + Math.random() * 400;
+        acExplosionParticles.push({
+          type: 'implode',
+          x: cx + Math.cos(wAngle) * wDist,
+          y: cy + Math.sin(wAngle) * wDist,
+          targetX: cx,
+          targetY: cy,
+          size: 4 + Math.random() * 8,
+          life: 1.0,
+          decay: 0.005,
+          delay: 60 + Math.floor(Math.random() * 40),
+          hue: Math.random() * 360,
+        });
+      }
+    }
+
+    // Store actual penalty duration
     acPenaltyActive = duration;
+
+    // On final strike, persist the count immediately before wipe
+    if (isFinal) {
+      save();
+    }
   }
 
   function acGetPenaltyDuration() {
@@ -2206,6 +2244,15 @@
       acPenaltyActive = false;
       acExplosionParticles = [];
       acWarningOpacity = 0;
+
+      // 4th strike: wipe save and reload
+      if (acResetScheduled) {
+        acResetScheduled = false;
+        try { localStorage.removeItem(getSaveKey()); } catch (_) {}
+        try { localStorage.removeItem('light-game-mode'); } catch (_) {}
+        window.location.reload();
+        return true; // stay blocked until reload kicks in
+      }
       return false;
     }
     return true;
@@ -2222,6 +2269,17 @@
       if (p.type === 'shockwave') {
         if (p.delay > 0) { p.delay--; continue; }
         p.radius += p.speed;
+        p.life -= p.decay;
+      } else if (p.type === 'implode') {
+        if (p.delay > 0) { p.delay--; continue; }
+        // Accelerate toward center
+        var idx = p.targetX - p.x;
+        var idy = p.targetY - p.y;
+        var idist = Math.sqrt(idx * idx + idy * idy);
+        if (idist > 2) {
+          p.x += (idx / idist) * (3 + (1 - p.life) * 12);
+          p.y += (idy / idist) * (3 + (1 - p.life) * 12);
+        }
         p.life -= p.decay;
       } else if (p.type === 'debris') {
         p.x += p.vx;
@@ -2274,14 +2332,42 @@
     }
 
     // --- Background flash / darkness ---
-    var flashAlpha = Math.max(0, 0.9 - elapsed / 1200);
-    if (flashAlpha > 0) {
-      if (gameMode === 'off') {
-        ctx.fillStyle = 'rgba(0, 0, 0, ' + flashAlpha + ')';
-      } else {
-        ctx.fillStyle = 'rgba(255, 180, 60, ' + flashAlpha + ')';
+    var isFinalDraw = acResetScheduled;
+    if (isFinalDraw) {
+      // Final strike: longer, more intense flash + secondary pulse at implosion
+      var flashAlpha = Math.max(0, 1.0 - elapsed / 2000);
+      var secondPulse = elapsed > 2000 ? Math.max(0, 0.7 - (elapsed - 2000) / 1500) : 0;
+      var totalFlash = Math.min(1, flashAlpha + secondPulse);
+      if (totalFlash > 0) {
+        if (gameMode === 'off') {
+          ctx.fillStyle = 'rgba(30, 0, 50, ' + totalFlash + ')';
+        } else {
+          ctx.fillStyle = 'rgba(255, 100, 30, ' + totalFlash + ')';
+        }
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Final fade to white/black before reload
+      var duration = acGetPenaltyDuration();
+      if (elapsed > duration * 0.75) {
+        var fadeProgress = (elapsed - duration * 0.75) / (duration * 0.25);
+        var fadeAlpha = Math.min(1, fadeProgress);
+        if (gameMode === 'off') {
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + fadeAlpha + ')';
+        } else {
+          ctx.fillStyle = 'rgba(255, 255, 255, ' + fadeAlpha + ')';
+        }
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    } else {
+      var flashAlpha = Math.max(0, 0.9 - elapsed / 1200);
+      if (flashAlpha > 0) {
+        if (gameMode === 'off') {
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + flashAlpha + ')';
+        } else {
+          ctx.fillStyle = 'rgba(255, 180, 60, ' + flashAlpha + ')';
+        }
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
     // --- Shockwaves ---
@@ -2305,6 +2391,25 @@
     for (var j = 0; j < acExplosionParticles.length; j++) {
       var p = acExplosionParticles[j];
       if (p.type === 'shockwave') continue;
+      if (p.type === 'implode' && p.delay > 0) continue;
+
+      // Implode particles: streaks rushing toward center
+      if (p.type === 'implode') {
+        var iAlpha = Math.max(0, p.life) * 0.8;
+        var iGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+        if (gameMode === 'off') {
+          iGrad.addColorStop(0, 'rgba(120, 0, 200, ' + iAlpha + ')');
+          iGrad.addColorStop(1, 'rgba(60, 0, 100, 0)');
+        } else {
+          iGrad.addColorStop(0, 'rgba(255, 255, 220, ' + iAlpha + ')');
+          iGrad.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        }
+        ctx.fillStyle = iGrad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
 
       var alpha = Math.max(0, p.life);
 
@@ -2375,42 +2480,94 @@
     // --- Warning text ---
     if (acWarningOpacity > 0.01) {
       var textAlpha = acWarningOpacity;
-      var pulse = 0.85 + Math.sin(elapsed * 0.006) * 0.15;
+      var isFinalStrike = acResetScheduled;
+      var pulse = isFinalStrike
+        ? 0.8 + Math.sin(elapsed * 0.01) * 0.2
+        : 0.85 + Math.sin(elapsed * 0.006) * 0.15;
       var baseFontSize = Math.min(Math.max(canvas.width * 0.045, 22), 56);
       var fontSize = Math.floor(baseFontSize * pulse);
 
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = 'bold ' + fontSize + 'px "Courier New", Courier, monospace';
 
-      if (gameMode === 'off') {
-        ctx.shadowColor = 'rgba(100, 0, 160, ' + textAlpha + ')';
+      if (isFinalStrike) {
+        // --- FINAL STRIKE: dramatic red/purple text ---
+        var finalFontSize = Math.floor(fontSize * 1.3);
+        ctx.font = 'bold ' + finalFontSize + 'px "Courier New", Courier, monospace';
+
+        if (gameMode === 'off') {
+          ctx.shadowColor = 'rgba(150, 0, 200, ' + textAlpha + ')';
+          ctx.fillStyle = 'rgba(80, 0, 120, ' + textAlpha + ')';
+        } else {
+          ctx.shadowColor = 'rgba(255, 0, 0, ' + textAlpha + ')';
+          ctx.fillStyle = 'rgba(255, 60, 30, ' + textAlpha + ')';
+        }
+        ctx.shadowBlur = 35;
+
+        ctx.fillText(
+          gameMode === 'off' ? 'ANNIHILATION' : 'COMBUSTION TOTALE',
+          cx, cy - finalFontSize * 1.1
+        );
+
+        // Sub-text: warning about wipe
+        var subSize = Math.floor(finalFontSize * 0.38);
+        ctx.font = 'bold ' + subSize + 'px "Courier New", Courier, monospace';
+        ctx.shadowBlur = 15;
+        ctx.fillText('Trop de triche. Progression effac\u00E9e.', cx, cy + finalFontSize * 0.15);
+
+        // Countdown to reload (appears after initial explosion)
+        if (elapsed > 3000) {
+          var remaining = Math.ceil((acGetPenaltyDuration() - elapsed) / 1000);
+          if (remaining > 0) {
+            var countSize = Math.floor(finalFontSize * 0.7);
+            ctx.font = 'bold ' + countSize + 'px "Courier New", Courier, monospace';
+            ctx.shadowBlur = 20;
+            if (gameMode === 'off') {
+              ctx.fillStyle = 'rgba(120, 0, 180, ' + (textAlpha * 0.9) + ')';
+            } else {
+              ctx.fillStyle = 'rgba(255, 100, 50, ' + (textAlpha * 0.9) + ')';
+            }
+            ctx.fillText(remaining, cx, cy + finalFontSize * 0.15 + subSize * 2.2);
+          }
+        }
       } else {
-        ctx.shadowColor = 'rgba(255, 80, 0, ' + textAlpha + ')';
-      }
-      ctx.shadowBlur = 25;
+        // --- Normal warning (strikes 1-3) ---
+        ctx.font = 'bold ' + fontSize + 'px "Courier New", Courier, monospace';
 
-      if (gameMode === 'off') {
-        ctx.fillStyle = 'rgba(0, 0, 0, ' + textAlpha + ')';
-      } else {
-        ctx.fillStyle = 'rgba(255, 220, 120, ' + textAlpha + ')';
-      }
-      ctx.fillText(
-        gameMode === 'off' ? 'SURCHARGE OBSCURE' : 'SURCHARGE LUMINEUSE',
-        cx, cy - fontSize * 0.9
-      );
+        if (gameMode === 'off') {
+          ctx.shadowColor = 'rgba(100, 0, 160, ' + textAlpha + ')';
+        } else {
+          ctx.shadowColor = 'rgba(255, 80, 0, ' + textAlpha + ')';
+        }
+        ctx.shadowBlur = 25;
 
-      // Sub-text
-      var subSize = Math.floor(fontSize * 0.45);
-      ctx.font = subSize + 'px "Courier New", Courier, monospace';
-      ctx.shadowBlur = 12;
-      ctx.fillText('Clic automatique d\u00E9tect\u00E9', cx, cy + fontSize * 0.3);
+        if (gameMode === 'off') {
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + textAlpha + ')';
+        } else {
+          ctx.fillStyle = 'rgba(255, 220, 120, ' + textAlpha + ')';
+        }
+        ctx.fillText(
+          gameMode === 'off' ? 'SURCHARGE OBSCURE' : 'SURCHARGE LUMINEUSE',
+          cx, cy - fontSize * 0.9
+        );
 
-      // Penalty counter (if repeat offender)
-      if (acPenaltyCount > 1) {
-        ctx.font = Math.floor(subSize * 0.8) + 'px "Courier New", Courier, monospace';
-        ctx.fillText('Avertissement #' + acPenaltyCount, cx, cy + fontSize * 0.3 + subSize * 1.4);
+        // Sub-text
+        var subSize = Math.floor(fontSize * 0.45);
+        ctx.font = subSize + 'px "Courier New", Courier, monospace';
+        ctx.shadowBlur = 12;
+        ctx.fillText('Clic automatique d\u00E9tect\u00E9', cx, cy + fontSize * 0.3);
+
+        // Penalty counter + remaining strikes warning
+        if (acPenaltyCount > 1) {
+          ctx.font = Math.floor(subSize * 0.8) + 'px "Courier New", Courier, monospace';
+          var strikesLeft = AC_MAX_STRIKES - acPenaltyCount;
+          var warningMsg = 'Avertissement ' + acPenaltyCount + '/' + AC_MAX_STRIKES;
+          if (strikesLeft <= 1) {
+            warningMsg += ' \u2014 prochain = reset total';
+          }
+          ctx.fillText(warningMsg, cx, cy + fontSize * 0.3 + subSize * 1.4);
+        }
       }
 
       ctx.restore();
