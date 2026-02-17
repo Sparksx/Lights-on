@@ -1,26 +1,23 @@
 // === E2E Tests — Core game flow ===
 import { test, expect } from '@playwright/test';
 
-// Dismiss the intro overlay if visible (blocks canvas for 5s on new games)
-async function dismissIntro(page) {
-  const intro = page.locator('#intro-overlay:not(.hidden)');
-  try {
-    await intro.waitFor({ state: 'visible', timeout: 1000 });
-    await intro.click();
-    await intro.waitFor({ state: 'hidden', timeout: 2000 });
-  } catch {
-    // Intro not shown (existing save) — that's fine
-  }
-}
-
-// Start a fresh game in the given mode
+// Start a fresh game — clears save, selects mode, waits for intro to clear
 async function startFresh(page, mode = 'on') {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.locator(mode === 'on' ? '#mode-on' : '#mode-off').click();
   await expect(page.locator('#game-area')).toBeVisible({ timeout: 5000 });
-  await dismissIntro(page);
+
+  // New games show an intro overlay that blocks canvas clicks.
+  // It auto-dismisses after 5s, or on click. Try clicking, then wait for fade-out.
+  await page.waitForTimeout(500);
+  await page
+    .locator('#intro-overlay')
+    .click({ timeout: 2000 })
+    .catch(() => {});
+  // Wait for fade-out animation (800ms) to complete
+  await page.waitForTimeout(1200);
 }
 
 test.describe('Mode Selection', () => {
@@ -60,21 +57,21 @@ test.describe('Game Mechanics', () => {
 
     for (let i = 0; i < 10; i++) {
       await canvas.click({ position: { x: 200, y: 300 } });
-      await page.waitForTimeout(80);
+      await page.waitForTimeout(100);
     }
 
-    // Wait for UI to update
-    await page.waitForTimeout(300);
-
-    const text = await page.locator('#lumen-counter').textContent();
-    expect(text).not.toBe('0 lm');
+    // Poll until lumen counter updates (more reliable than a fixed wait)
+    await expect(async () => {
+      const text = await page.locator('#lumen-counter').textContent();
+      expect(text).not.toBe('0 lm');
+    }).toPass({ timeout: 5000 });
   });
 
   test('upgrade panel can be toggled', async ({ page }) => {
     const canvas = page.locator('#halo-canvas');
     for (let i = 0; i < 5; i++) {
       await canvas.click({ position: { x: 200, y: 300 } });
-      await page.waitForTimeout(80);
+      await page.waitForTimeout(100);
     }
 
     const upgradeToggle = page.locator('#upgrade-toggle');
@@ -93,16 +90,16 @@ test.describe('Persistence', () => {
     const canvas = page.locator('#halo-canvas');
     for (let i = 0; i < 10; i++) {
       await canvas.click({ position: { x: 200, y: 300 } });
-      await page.waitForTimeout(80);
+      await page.waitForTimeout(100);
     }
 
-    // Wait for the auto-save (every 5s)
-    await page.waitForTimeout(6000);
+    // Poll for auto-save instead of fixed timeout (save runs every 5s)
+    await expect(async () => {
+      const exists = await page.evaluate(() => localStorage.getItem('lights-on-save') !== null);
+      expect(exists).toBe(true);
+    }).toPass({ timeout: 10000 });
 
-    const saveExists = await page.evaluate(() => localStorage.getItem('lights-on-save') !== null);
-    expect(saveExists).toBe(true);
-
-    // Reload — should skip mode selection
+    // Reload — should skip mode selection and restore game
     await page.reload();
     await expect(page.locator('#game-area')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#mode-select')).not.toBeVisible();
