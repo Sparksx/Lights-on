@@ -8,6 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  timeout: 30000,
   use: {
     baseURL: 'http://localhost:8000',
     trace: 'on-first-retry',
@@ -26,6 +27,7 @@ export default defineConfig({
   webServer: {
     command: 'npx vite --port 8000',
     port: 8000,
+    timeout: 15000,
     reuseExistingServer: !process.env.CI,
   },
 });

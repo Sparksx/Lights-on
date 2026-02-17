@@ -11,17 +11,29 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
       },
     },
-    // Copy static assets that shouldn't be bundled
     copyPublicDir: false,
   },
   server: {
     port: 8000,
     proxy: {
-      '/api': 'http://localhost:3000',
-      '/auth': 'http://localhost:3000',
+      '/api': {
+        target: 'http://localhost:3000',
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
+      },
+      '/auth': {
+        target: 'http://localhost:3000',
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
+      },
       '/socket.io': {
         target: 'http://localhost:3000',
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
       },
     },
   },
