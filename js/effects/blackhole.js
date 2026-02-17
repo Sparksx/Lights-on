@@ -49,11 +49,18 @@ function startBlackHole() {
       const dist = Math.sqrt(dx * dx + dy * dy);
       const angle = Math.atan2(dy, dx);
       blackHoleParticles.push({
-        x: h.x, y: h.y, originX: h.x, originY: h.y,
-        angle: angle, dist: dist,
-        size: 2 + Math.random() * 4, alpha: 0.6 + Math.random() * 0.4,
-        spiralSpeed: 0.02 + Math.random() * 0.03, absorbed: false,
-        stretch: 1, stretchAngle: angle,
+        x: h.x,
+        y: h.y,
+        originX: h.x,
+        originY: h.y,
+        angle: angle,
+        dist: dist,
+        size: 2 + Math.random() * 4,
+        alpha: 0.6 + Math.random() * 0.4,
+        spiralSpeed: 0.02 + Math.random() * 0.03,
+        absorbed: false,
+        stretch: 1,
+        stretchAngle: angle,
       });
     }
   }
@@ -65,11 +72,18 @@ function startBlackHole() {
     const dist = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx);
     blackHoleParticles.push({
-      x: b.x, y: b.y, originX: b.x, originY: b.y,
-      angle: angle, dist: dist,
-      size: 3 + Math.random() * 5, alpha: 0.7 + Math.random() * 0.3,
-      spiralSpeed: 0.015 + Math.random() * 0.025, absorbed: false,
-      stretch: 1, stretchAngle: angle,
+      x: b.x,
+      y: b.y,
+      originX: b.x,
+      originY: b.y,
+      angle: angle,
+      dist: dist,
+      size: 3 + Math.random() * 5,
+      alpha: 0.7 + Math.random() * 0.3,
+      spiralSpeed: 0.015 + Math.random() * 0.025,
+      absorbed: false,
+      stretch: 1,
+      stretchAngle: angle,
     });
   }
 
@@ -79,11 +93,18 @@ function startBlackHole() {
     const dist = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx);
     blackHoleParticles.push({
-      x: s.x, y: s.y, originX: s.x, originY: s.y,
-      angle: angle, dist: dist,
-      size: s.size + 0.5, alpha: 0.3 + Math.random() * 0.4,
-      spiralSpeed: 0.01 + Math.random() * 0.02, absorbed: false,
-      stretch: 1, stretchAngle: angle,
+      x: s.x,
+      y: s.y,
+      originX: s.x,
+      originY: s.y,
+      angle: angle,
+      dist: dist,
+      size: s.size + 0.5,
+      alpha: 0.3 + Math.random() * 0.4,
+      spiralSpeed: 0.01 + Math.random() * 0.02,
+      absorbed: false,
+      stretch: 1,
+      stretchAngle: angle,
     });
   }
 
@@ -97,11 +118,18 @@ function startBlackHole() {
       const dist = Math.sqrt(dx * dx + dy * dy);
       const angle = Math.atan2(dy, dx);
       blackHoleParticles.push({
-        x: px, y: py, originX: px, originY: py,
-        angle: angle, dist: dist,
-        size: 1 + Math.random() * 3, alpha: 0.2 + Math.random() * 0.5,
-        spiralSpeed: 0.01 + Math.random() * 0.03, absorbed: false,
-        stretch: 1, stretchAngle: angle,
+        x: px,
+        y: py,
+        originX: px,
+        originY: py,
+        angle: angle,
+        dist: dist,
+        size: 1 + Math.random() * 3,
+        alpha: 0.2 + Math.random() * 0.5,
+        spiralSpeed: 0.01 + Math.random() * 0.03,
+        absorbed: false,
+        stretch: 1,
+        stretchAngle: angle,
       });
     }
   }
@@ -129,7 +157,7 @@ export function updateBlackHole() {
     for (const p of blackHoleParticles) {
       if (p.absorbed) continue;
       p.angle += p.spiralSpeed * (1 + (1 - p.dist / (Math.max(canvas.width, canvas.height) * 0.8)) * 3);
-      p.dist *= (0.985 - absorbProgress * 0.01);
+      p.dist *= 0.985 - absorbProgress * 0.01;
       const proximityFactor = Math.max(0, 1 - p.dist / 200);
       p.stretch = 1 + proximityFactor * 4;
       p.stretchAngle = p.angle + Math.PI;
@@ -179,9 +207,7 @@ export function drawBlackHole() {
 
   if (blackHoleRadius > 2) {
     const diskRadius = blackHoleRadius * 2.5;
-    const diskAlpha = blackHolePhase === 3
-      ? Math.max(0, 1 - (blackHoleProgress - 0.75) / 0.25) * 0.15
-      : 0.15;
+    const diskAlpha = blackHolePhase === 3 ? Math.max(0, 1 - (blackHoleProgress - 0.75) / 0.25) * 0.15 : 0.15;
 
     ctx.save();
     ctx.translate(cx, cy);

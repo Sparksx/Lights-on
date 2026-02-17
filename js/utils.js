@@ -12,7 +12,7 @@ export var _now = Date.now.bind(Date);
 // --- Color helpers for mode-aware rendering ---
 export function rgb(r, g, b) {
   if (gameMode === 'off') {
-    return (255 - r) + ', ' + (255 - g) + ', ' + (255 - b);
+    return 255 - r + ', ' + (255 - g) + ', ' + (255 - b);
   }
   return r + ', ' + g + ', ' + b;
 }

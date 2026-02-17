@@ -1,7 +1,15 @@
 // === UI — HUD, progress bar, toggle notification ===
 'use strict';
 
-import { state, VICTORY_LUMENS, shared, getUpgradeCount, prestigeLevel, getTotalPrestigeMultiplier, mpPrestigeBonus } from './state.js';
+import {
+  state,
+  VICTORY_LUMENS,
+  shared,
+  getUpgradeCount,
+  prestigeLevel,
+  getTotalPrestigeMultiplier,
+  mpPrestigeBonus,
+} from './state.js';
 import { formatNumber, unitName, rgba } from './utils.js';
 import { progressFill, upgradeToggle } from './dom.js';
 import { canvas, ctx } from './canvas.js';
@@ -15,7 +23,10 @@ export function updateToggleNotification() {
     var count = getUpgradeCount(up.id);
     if (count >= up.maxCount) continue;
     if (state.totalLumens < up.unlockAt) continue;
-    if (state.lumens >= getUpgradeCost(up)) { hasNew = true; break; }
+    if (state.lumens >= getUpgradeCost(up)) {
+      hasNew = true;
+      break;
+    }
   }
   if (hasNew) {
     upgradeToggle.classList.add('has-new');
@@ -26,7 +37,7 @@ export function updateToggleNotification() {
 
 export function updateUI() {
   const progress = Math.min(state.totalLumens / VICTORY_LUMENS, 1);
-  progressFill.style.width = (progress * 100) + '%';
+  progressFill.style.width = progress * 100 + '%';
   updateToggleNotification();
 }
 

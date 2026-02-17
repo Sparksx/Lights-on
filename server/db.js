@@ -28,24 +28,22 @@ async function findOrCreateUser(provider, profile) {
   const idColumn = provider === 'google' ? 'google_id' : 'discord_id';
 
   // Try to find existing user
-  const existing = await pool.query(
-    `SELECT * FROM users WHERE ${idColumn} = $1`,
-    [profile.id]
-  );
+  const existing = await pool.query(`SELECT * FROM users WHERE ${idColumn} = $1`, [profile.id]);
 
   if (existing.rows.length > 0) {
     // Update last seen
-    await pool.query(
-      `UPDATE users SET last_seen_at = NOW(), display_name = $1, avatar_url = $2 WHERE id = $3`,
-      [profile.displayName, profile.avatar, existing.rows[0].id]
-    );
+    await pool.query(`UPDATE users SET last_seen_at = NOW(), display_name = $1, avatar_url = $2 WHERE id = $3`, [
+      profile.displayName,
+      profile.avatar,
+      existing.rows[0].id,
+    ]);
     return existing.rows[0];
   }
 
   // Create new user
   const result = await pool.query(
     `INSERT INTO users (${idColumn}, display_name, avatar_url) VALUES ($1, $2, $3) RETURNING *`,
-    [profile.id, profile.displayName, profile.avatar]
+    [profile.id, profile.displayName, profile.avatar],
   );
   return result.rows[0];
 }
@@ -54,9 +52,7 @@ async function findOrCreateUser(provider, profile) {
  * Get the current active season of the cosmic war.
  */
 async function getCurrentSeason() {
-  const result = await pool.query(
-    `SELECT * FROM cosmic_war WHERE ended_at IS NULL ORDER BY season DESC LIMIT 1`
-  );
+  const result = await pool.query(`SELECT * FROM cosmic_war WHERE ended_at IS NULL ORDER BY season DESC LIMIT 1`);
   return result.rows[0] || null;
 }
 
@@ -71,7 +67,7 @@ async function addToCosmicWar(side, amount) {
     `UPDATE cosmic_war SET ${column} = ${column} + $1
      WHERE ended_at IS NULL
      RETURNING total_light, total_dark`,
-    [Math.floor(amount)]
+    [Math.floor(amount)],
   );
   return result.rows[0] || null;
 }
@@ -86,7 +82,7 @@ async function recordContribution(userId, gameMode, amount) {
   await pool.query(
     `INSERT INTO contributions (user_id, season, game_mode, lumens_contributed)
      VALUES ($1, $2, $3, $4)`,
-    [userId, season.season, gameMode, Math.floor(amount)]
+    [userId, season.season, gameMode, Math.floor(amount)],
   );
 }
 
@@ -130,7 +126,7 @@ async function getPlayerSeasonContribution(userId) {
      GROUP BY game_mode
      ORDER BY total DESC
      LIMIT 1`,
-    [userId, season.season]
+    [userId, season.season],
   );
 
   if (result.rows.length === 0) return { total: 0, side: 'on', season: season.season };
@@ -159,10 +155,7 @@ async function getPlayerGrade(userId) {
  * Called on each contribution — increments if new day, resets if gap > 1 day.
  */
 async function updateStreak(userId) {
-  const result = await pool.query(
-    `SELECT streak_days, streak_last_date FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await pool.query(`SELECT streak_days, streak_last_date FROM users WHERE id = $1`, [userId]);
   if (result.rows.length === 0) return 0;
 
   const user = result.rows[0];
@@ -191,10 +184,11 @@ async function updateStreak(userId) {
     newStreak = 1;
   }
 
-  await pool.query(
-    `UPDATE users SET streak_days = $1, streak_last_date = $2 WHERE id = $3`,
-    [newStreak, today, userId]
-  );
+  await pool.query(`UPDATE users SET streak_days = $1, streak_last_date = $2 WHERE id = $3`, [
+    newStreak,
+    today,
+    userId,
+  ]);
 
   return newStreak;
 }
@@ -210,10 +204,7 @@ function getStreakMultiplier(streakDays) {
  * Get player's contribution rate setting.
  */
 async function getPlayerContributionRate(userId) {
-  const result = await pool.query(
-    `SELECT contribution_rate FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await pool.query(`SELECT contribution_rate FROM users WHERE id = $1`, [userId]);
   return result.rows[0]?.contribution_rate || 25;
 }
 
@@ -224,10 +215,7 @@ async function setPlayerContributionRate(userId, rate) {
   const validRates = [10, 25, 50, 100];
   if (!validRates.includes(rate)) return false;
 
-  await pool.query(
-    `UPDATE users SET contribution_rate = $1 WHERE id = $2`,
-    [rate, userId]
-  );
+  await pool.query(`UPDATE users SET contribution_rate = $1 WHERE id = $2`, [rate, userId]);
   return true;
 }
 
@@ -237,7 +225,7 @@ async function setPlayerContributionRate(userId, rate) {
 async function getPlayerProfile(userId) {
   const userResult = await pool.query(
     `SELECT streak_days, streak_last_date, contribution_rate, mp_prestige_bonus FROM users WHERE id = $1`,
-    [userId]
+    [userId],
   );
   if (userResult.rows.length === 0) return null;
 
@@ -285,7 +273,7 @@ async function getLeaderboard(userId) {
      JOIN users u ON u.id = c.user_id
      ORDER BY c.total DESC
      LIMIT 20`,
-    [season.season]
+    [season.season],
   );
 
   // Top 20 for dark side
@@ -300,7 +288,7 @@ async function getLeaderboard(userId) {
      JOIN users u ON u.id = c.user_id
      ORDER BY c.total DESC
      LIMIT 20`,
-    [season.season]
+    [season.season],
   );
 
   // Player's own rank (if logged in)
@@ -317,7 +305,7 @@ async function getLeaderboard(userId) {
            GROUP BY user_id
            HAVING SUM(lumens_contributed) > $3
          ) r`,
-        [season.season, side, total]
+        [season.season, side, total],
       );
       playerRank = {
         rank: Number(rankResult.rows[0]?.rank || 1),
@@ -372,20 +360,14 @@ async function checkAndEndSeason() {
   else winner = 'draw';
 
   // Close the season
-  await pool.query(
-    `UPDATE cosmic_war SET ended_at = NOW(), winner = $1 WHERE id = $2`,
-    [winner, season.id]
-  );
+  await pool.query(`UPDATE cosmic_war SET ended_at = NOW(), winner = $1 WHERE id = $2`, [winner, season.id]);
 
   // Generate rewards for all contributing players
   await generateSeasonRewards(season.season, winner);
 
   // Create the next season
   const nextSeason = season.season + 1;
-  await pool.query(
-    `INSERT INTO cosmic_war (season) VALUES ($1)`,
-    [nextSeason]
-  );
+  await pool.query(`INSERT INTO cosmic_war (season) VALUES ($1)`, [nextSeason]);
 
   console.log(`[db] Season ${nextSeason} started. Previous winner: ${winner}`);
 
@@ -410,7 +392,7 @@ async function generateSeasonRewards(seasonNum, winner) {
      WHERE season = $1
      GROUP BY user_id, game_mode
      ORDER BY total DESC`,
-    [seasonNum]
+    [seasonNum],
   );
 
   // Group by side to compute ranks
@@ -464,20 +446,22 @@ async function generateSeasonRewards(seasonNum, winner) {
       await pool.query(
         `INSERT INTO season_rewards (user_id, season, side, contribution_total, rank_in_team, grade, won, top_percent, prestige_bonus)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [p.userId, seasonNum, side, p.total, rank, grade, won, isTopPercent, prestigeBonus]
+        [p.userId, seasonNum, side, p.total, rank, grade, won, isTopPercent, prestigeBonus],
       );
 
       // Apply prestige bonus to user's permanent bonus
       if (prestigeBonus > 0) {
-        await pool.query(
-          `UPDATE users SET mp_prestige_bonus = mp_prestige_bonus + $1 WHERE id = $2`,
-          [prestigeBonus, p.userId]
-        );
+        await pool.query(`UPDATE users SET mp_prestige_bonus = mp_prestige_bonus + $1 WHERE id = $2`, [
+          prestigeBonus,
+          p.userId,
+        ]);
       }
     }
   }
 
-  console.log(`[db] Generated rewards for season ${seasonNum}: ${bySide.on.length} light + ${bySide.off.length} dark players`);
+  console.log(
+    `[db] Generated rewards for season ${seasonNum}: ${bySide.on.length} light + ${bySide.off.length} dark players`,
+  );
 }
 
 /**
@@ -490,7 +474,7 @@ async function getUnclaimedRewards(userId) {
      JOIN cosmic_war cw ON cw.season = sr.season
      WHERE sr.user_id = $1 AND sr.claimed = FALSE
      ORDER BY sr.season DESC`,
-    [userId]
+    [userId],
   );
   return result.rows;
 }
@@ -503,7 +487,7 @@ async function claimReward(userId, rewardId) {
     `UPDATE season_rewards SET claimed = TRUE
      WHERE id = $1 AND user_id = $2 AND claimed = FALSE
      RETURNING *`,
-    [rewardId, userId]
+    [rewardId, userId],
   );
   return result.rows[0] || null;
 }

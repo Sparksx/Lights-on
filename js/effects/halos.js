@@ -16,7 +16,8 @@ export function addHalo(x, y) {
     // OFF MODE: Void collapse — darkness implodes inward
     halos.push({
       type: 'void-collapse',
-      x, y,
+      x,
+      y,
       maxRadius: (80 + 40) * scale,
       opacity: intensity * 0.7,
       life: 1.0,
@@ -27,7 +28,8 @@ export function addHalo(x, y) {
     for (let i = 0; i < 3; i++) {
       halos.push({
         type: 'void-ring',
-        x, y,
+        x,
+        y,
         maxRadius: (100 + i * 50) * scale,
         opacity: intensity * (0.6 - i * 0.15),
         life: 1.0,
@@ -38,7 +40,8 @@ export function addHalo(x, y) {
 
     halos.push({
       type: 'void-stain',
-      x, y,
+      x,
+      y,
       maxRadius: 35 * scale,
       opacity: 0.12 + progress * 0.08,
       life: 1.0,
@@ -52,7 +55,8 @@ export function addHalo(x, y) {
   // ON MODE: Light spreading outward
   halos.push({
     type: 'glow',
-    x, y,
+    x,
+    y,
     maxRadius: 25 * scale,
     opacity: intensity,
     life: 1.0,
@@ -63,7 +67,8 @@ export function addHalo(x, y) {
   for (let i = 0; i < 3; i++) {
     halos.push({
       type: 'ring',
-      x, y,
+      x,
+      y,
       maxRadius: (80 + i * 40) * scale,
       opacity: intensity * (1 - i * 0.2),
       life: 1.0,
@@ -74,7 +79,8 @@ export function addHalo(x, y) {
 
   halos.push({
     type: 'persist',
-    x, y,
+    x,
+    y,
     maxRadius: 45 * scale,
     opacity: 0.08 + progress * 0.06,
     life: 1.0,
@@ -176,9 +182,9 @@ export function drawHalos() {
       const collapseT = h.life;
       const r = Math.max(h.maxRadius * collapseT, 1);
       const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
-      gradient.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.9) + ')');
-      gradient.addColorStop(0.4, 'rgba(20, 0, 30, ' + (alpha * 0.5) + ')');
-      gradient.addColorStop(0.7, 'rgba(40, 0, 50, ' + (alpha * 0.2) + ')');
+      gradient.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * 0.9 + ')');
+      gradient.addColorStop(0.4, 'rgba(20, 0, 30, ' + alpha * 0.5 + ')');
+      gradient.addColorStop(0.7, 'rgba(40, 0, 50, ' + alpha * 0.2 + ')');
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.beginPath();
       ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
@@ -195,8 +201,8 @@ export function drawHalos() {
     } else if (h.type === 'void-stain') {
       const r = h.maxRadius;
       const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
-      gradient.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.5) + ')');
-      gradient.addColorStop(0.5, 'rgba(10, 0, 15, ' + (alpha * 0.2) + ')');
+      gradient.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * 0.5 + ')');
+      gradient.addColorStop(0.5, 'rgba(10, 0, 15, ' + alpha * 0.2 + ')');
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.beginPath();
       ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
@@ -220,7 +226,7 @@ export function drawHalos() {
         for (let pi = 1; pi < h.points.length; pi++) {
           ctx.lineTo(h.points[pi].x, h.points[pi].y);
         }
-        ctx.strokeStyle = 'rgba(60, 0, 80, ' + (crackAlpha * 0.4) + ')';
+        ctx.strokeStyle = 'rgba(60, 0, 80, ' + crackAlpha * 0.4 + ')';
         ctx.lineWidth = (h.crackWidth || 2) * 5;
         ctx.stroke();
         ctx.beginPath();
@@ -228,7 +234,7 @@ export function drawHalos() {
         for (let pi = 1; pi < h.points.length; pi++) {
           ctx.lineTo(h.points[pi].x, h.points[pi].y);
         }
-        ctx.strokeStyle = 'rgba(40, 0, 60, ' + (crackAlpha * 0.12) + ')';
+        ctx.strokeStyle = 'rgba(40, 0, 60, ' + crackAlpha * 0.12 + ')';
         ctx.lineWidth = (h.crackWidth || 2) * 12;
         ctx.stroke();
       }
@@ -237,8 +243,8 @@ export function drawHalos() {
       if (r > 1) {
         const gradient = ctx.createRadialGradient(h.x, h.y, r * 0.8, h.x, h.y, r);
         gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        gradient.addColorStop(0.5, 'rgba(20, 0, 30, ' + (alpha * 0.6) + ')');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, ' + (alpha * 0.3) + ')');
+        gradient.addColorStop(0.5, 'rgba(20, 0, 30, ' + alpha * 0.6 + ')');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, ' + alpha * 0.3 + ')');
         ctx.beginPath();
         ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
@@ -247,7 +253,7 @@ export function drawHalos() {
       const coreR = h.maxRadius * (1 - h.life) * 0.3;
       if (coreR > 0.5) {
         const coreGrad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, coreR);
-        coreGrad.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.8) + ')');
+        coreGrad.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * 0.8 + ')');
         coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.beginPath();
         ctx.arc(h.x, h.y, coreR, 0, Math.PI * 2);
@@ -261,8 +267,8 @@ export function drawHalos() {
       const gg = 0;
       const bb = Math.floor(60 + coldness * 100);
       const gradient = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r);
-      gradient.addColorStop(0, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + (alpha * 0.7) + ')');
-      gradient.addColorStop(0.5, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + (alpha * 0.25) + ')');
+      gradient.addColorStop(0, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + alpha * 0.7 + ')');
+      gradient.addColorStop(0.5, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + alpha * 0.25 + ')');
       gradient.addColorStop(1, 'rgba(' + rr + ', ' + gg + ', ' + bb + ', 0)');
       ctx.beginPath();
       ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
@@ -343,7 +349,8 @@ export function addEdgeGlow() {
   if (gameMode === 'off') {
     halos.push({
       type: 'edge-dark',
-      x: 0, y: 0,
+      x: 0,
+      y: 0,
       maxRadius: 120,
       opacity: 0.12,
       life: 1.0,
@@ -353,9 +360,10 @@ export function addEdgeGlow() {
   } else {
     halos.push({
       type: 'edge',
-      x: 0, y: 0,
+      x: 0,
+      y: 0,
       maxRadius: 100,
-      opacity: 0.10,
+      opacity: 0.1,
       life: 1.0,
       decay: 0.008,
       delay: 0,

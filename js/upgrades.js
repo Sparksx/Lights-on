@@ -16,9 +16,8 @@ import { checkOnboarding } from './onboarding.js';
 // --- Milestones ---
 let upgradeUnlocked = false;
 const MILESTONE_THRESHOLDS = [
-  100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000,
-  5000000, 10000000, 50000000, 100000000, 500000000, 1000000000,
-  10000000000, 100000000000, 500000000000, 1000000000000
+  100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 50000000, 100000000, 500000000,
+  1000000000, 10000000000, 100000000000, 500000000000, 1000000000000,
 ];
 let lastMilestoneIndex = -1;
 let activeMilestone = null;
@@ -112,7 +111,7 @@ export function renderUpgrades() {
 
     const displayName = getUpgradeName(up);
     const displayDesc = getUpgradeDesc(up);
-    const costLabel = isMaxed ? 'MAX' : (shared.adminMode ? 'FREE' : formatNumber(cost) + ' ' + unit);
+    const costLabel = isMaxed ? 'MAX' : shared.adminMode ? 'FREE' : formatNumber(cost) + ' ' + unit;
 
     let effectLabel = '';
     if (up.type === 'passive') {

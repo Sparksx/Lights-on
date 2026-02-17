@@ -7,8 +7,10 @@
 The game includes a multiplayer "Cosmic War" feature where authenticated players contribute their earnings to a global light-vs-dark tally, tracked per season.
 
 - **Language**: French (all user-facing text is in French)
-- **Tech stack**: Vanilla HTML/CSS/JavaScript frontend (ES modules, zero build tools) + Node.js/Express backend for multiplayer
-- **No build system**: No bundler, no transpiler. Frontend files are served directly as static assets.
+- **Tech stack**: Vanilla HTML/CSS/JavaScript frontend (ES modules, Vite build) + Node.js/Express backend for multiplayer
+- **Build system**: Vite (dev server with HMR, production bundling)
+- **Testing**: Vitest (unit) + Playwright (E2E)
+- **Code quality**: ESLint + Prettier
 
 ## File Structure
 
@@ -18,10 +20,16 @@ The game includes a multiplayer "Cosmic War" feature where authenticated players
 ├── style.css               # All styling (~1,340 lines)
 ├── sw.js                   # Service Worker — network-first caching (v9)
 ├── manifest.json           # PWA manifest (standalone, portrait, black theme)
-├── package.json            # Root package.json (postinstall + start scripts)
+├── package.json            # Root package.json (scripts, devDependencies)
+├── vite.config.js          # Vite build configuration
+├── vitest.config.js        # Vitest test configuration
+├── playwright.config.js    # Playwright E2E test configuration
+├── eslint.config.js        # ESLint flat config (ES9)
+├── .prettierrc             # Prettier formatting rules
+├── .prettierignore         # Prettier ignore patterns
 ├── Procfile                # Heroku/Railway process definition
 ├── railway.json            # Railway deployment config
-├── .gitignore              # node_modules, .env
+├── .gitignore              # node_modules, .env, dist, test results
 ├── README.md               # Minimal project readme
 ├── ANALYSIS.md             # French-language improvement proposals document
 ├── CLAUDE.md               # This file
@@ -55,6 +63,15 @@ The game includes a multiplayer "Cosmic War" feature where authenticated players
 │       ├── halos.js        # Halo ring effects (~368 lines)
 │       ├── bigbang.js      # Big bang explosion effect (~205 lines)
 │       └── blackhole.js    # Black hole visual effect (~282 lines)
+├── tests/                  # Test suites
+│   ├── unit/               # Vitest unit tests
+│   │   ├── setup.js        # jsdom bootstrap, mocks (localStorage, canvas, rAF)
+│   │   ├── state.test.js   # Tests for state.js
+│   │   ├── utils.test.js   # Tests for utils.js
+│   │   ├── save.test.js    # Tests for save.js
+│   │   └── upgrades-data.test.js # Tests for upgrades-data.js
+│   └── e2e/                # Playwright E2E tests
+│       └── game.spec.js    # Core game flow tests
 └── server/                 # Backend for multiplayer features
     ├── index.js            # Express + Socket.io server, API routes (~159 lines)
     ├── auth.js             # Passport.js OAuth (Google + Discord) (~104 lines)
@@ -197,19 +214,18 @@ After reaching victory, players can "Cross Over" to switch modes with a permanen
 
 ## Development Workflow
 
-### Running locally (frontend only)
-
-Serve the project root with any static HTTP server:
+### Running locally (frontend only — with Vite)
 
 ```bash
-# Python
-python3 -m http.server 8000
-
-# Node (npx)
-npx serve .
+npm install        # install all dependencies (including devDependencies)
+npm run dev        # starts Vite dev server on http://localhost:8000
 ```
 
-Then open `http://localhost:8000`. Multiplayer features will be hidden (server unreachable).
+Vite provides:
+- **Hot Module Replacement (HMR)** — changes reflect instantly
+- **Proxy** — `/api/`, `/auth/`, `/socket.io/` are proxied to `localhost:3000` (if the backend is running)
+
+Multiplayer features will be hidden if the backend is not running.
 
 ### Running with multiplayer
 
@@ -221,15 +237,16 @@ Requires PostgreSQL and OAuth credentials:
 cp server/.env.example server/.env
 
 # 3. Install dependencies
-npm install        # runs postinstall which does: cd server && npm install
+npm install
 
-# 4. Start the server
-npm start          # runs: node server/index.js
+# 4. Start the backend server (port 3000)
+npm start
+
+# 5. In another terminal, start Vite dev server (port 8000, proxies to backend)
+npm run dev
 ```
 
-The server serves static files from the project root and handles API/auth/websocket routes. Open `http://localhost:3000`.
-
-For development with auto-restart:
+For backend development with auto-restart:
 
 ```bash
 cd server && npm run dev    # uses node --watch
@@ -237,12 +254,68 @@ cd server && npm run dev    # uses node --watch
 
 ### Testing
 
-There is no automated test suite. Testing is manual:
+#### Unit tests (Vitest)
+
+```bash
+npm test            # run all unit tests once
+npm run test:watch  # run in watch mode (re-runs on file change)
+```
+
+Unit tests live in `tests/unit/` and cover pure logic modules:
+- `state.test.js` — game state, prestige, save keys, upgrade counts
+- `utils.test.js` — color helpers (mode inversion), number formatting, easing
+- `save.test.js` — localStorage persistence, mode-dependent keys, corruption handling
+- `upgrades-data.test.js` — upgrade definitions, shadow theme, cost calculations
+
+The test environment uses **jsdom** with mocks for `localStorage`, `canvas`, and `requestAnimationFrame` (see `tests/unit/setup.js`).
+
+**Adding unit tests**: Create `tests/unit/<module>.test.js`. Tests can import directly from `js/` modules. The jsdom setup provides a minimal DOM environment.
+
+#### E2E tests (Playwright)
+
+```bash
+npx playwright install    # first time: install browsers
+npm run test:e2e          # run E2E tests
+npm run test:e2e:ui       # run with interactive UI
+```
+
+E2E tests live in `tests/e2e/` and test full user flows:
+- Mode selection (ON/OFF)
+- Canvas clicking and lumen generation
+- Upgrade panel toggling
+- Save/load persistence across reloads
+- Responsive design on mobile viewports
+
+Playwright automatically starts a Vite dev server on port 8000 during test runs.
+
+#### Manual testing
 
 - Use the in-game **Debug toggle** (bottom of upgrade panel) to enable admin mode
 - Use browser DevTools console to inspect/modify state via breakpoints
 - Test both ON and OFF modes separately (they have independent save files)
 - Test multiplayer by running the server with a PostgreSQL database
+
+### Code Quality
+
+```bash
+npm run lint          # run ESLint
+npm run lint:fix      # auto-fix ESLint issues
+npm run format        # format all files with Prettier
+npm run format:check  # check formatting without writing
+```
+
+**ESLint** (flat config, `eslint.config.js`): Separate rules for frontend ES modules and backend CommonJS. Allows empty catch blocks (intentional pattern in save/state modules).
+
+**Prettier** (`.prettierrc`): Single quotes, trailing commas, 120 char width.
+
+### Building for production
+
+```bash
+npm run build       # output to dist/
+npm run preview     # preview the production build locally
+```
+
+Vite bundles all JS modules, CSS, and assets into `dist/`. The server still serves static files from the project root in production — the build output is for future CDN/static hosting scenarios.
 
 ### Deploying
 
@@ -305,7 +378,7 @@ There is no automated test suite. Testing is manual:
 
 7. **The game UI is in French.** All user-facing strings (upgrade names, descriptions, UI labels, victory text, onboarding text) should be written in French. Upgrade names/descs in `upgrades-data.js` are currently in English but get shadow-themed names in OFF mode.
 
-8. **No build step** means changes are immediately reflected on reload — but remember to bump the SW cache version for production.
+8. **Vite dev server** (`npm run dev`) provides HMR — changes reflect instantly. For production, `npm run build` creates an optimized bundle in `dist/`. Remember to bump the SW cache version for production deployments.
 
 9. **Canvas rendering order** matters — the draw order in `js/game-loop.js` determines visual layering (stars at back, pulsar near front, HUD on top).
 
@@ -320,3 +393,7 @@ There is no automated test suite. Testing is manual:
 14. **Adding a new API endpoint** requires adding it to `server/index.js`. If it needs database access, add the query function to `server/db.js`. Auth-protected routes should check `req.isAuthenticated()`.
 
 15. **Socket.io** is auto-served by the server at `/socket.io/socket.io.js` — no npm package needed on the frontend. The client script is loaded with `defer` in `index.html`.
+
+16. **Writing tests**: Unit tests go in `tests/unit/<module>.test.js`. For pure logic (state, utils, upgrades-data, save), write Vitest tests. For user-facing flows (mode selection, clicking, upgrade purchasing), write Playwright E2E tests in `tests/e2e/`. Run `npm test` before pushing changes.
+
+17. **Linting and formatting**: Run `npm run lint` and `npm run format:check` before pushing. The ESLint config uses the flat config format (`eslint.config.js`) with separate rules for frontend (ES modules) and backend (CommonJS).

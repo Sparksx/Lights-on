@@ -16,22 +16,27 @@ passport.deserializeUser((user, done) => {
 
 // --- Google OAuth2 ---
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: '/auth/google/callback',
-  }, async (accessToken, refreshToken, profile, done) => {
-    try {
-      const user = await findOrCreateUser('google', {
-        id: profile.id,
-        displayName: profile.displayName,
-        avatar: profile.photos?.[0]?.value || null,
-      });
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  }));
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: '/auth/google/callback',
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const user = await findOrCreateUser('google', {
+            id: profile.id,
+            displayName: profile.displayName,
+            avatar: profile.photos?.[0]?.value || null,
+          });
+          done(null, user);
+        } catch (err) {
+          done(err);
+        }
+      },
+    ),
+  );
   console.log('[auth] Google strategy registered');
 } else {
   console.log('[auth] Google strategy skipped (missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)');
@@ -39,26 +44,31 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // --- Discord OAuth2 ---
 if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
-  passport.use(new DiscordStrategy({
-    clientID: process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    callbackURL: '/auth/discord/callback',
-    scope: ['identify'],
-  }, async (accessToken, refreshToken, profile, done) => {
-    try {
-      const avatarURL = profile.avatar
-        ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
-        : null;
-      const user = await findOrCreateUser('discord', {
-        id: profile.id,
-        displayName: profile.username,
-        avatar: avatarURL,
-      });
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  }));
+  passport.use(
+    new DiscordStrategy(
+      {
+        clientID: process.env.DISCORD_CLIENT_ID,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+        callbackURL: '/auth/discord/callback',
+        scope: ['identify'],
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const avatarURL = profile.avatar
+            ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+            : null;
+          const user = await findOrCreateUser('discord', {
+            id: profile.id,
+            displayName: profile.username,
+            avatar: avatarURL,
+          });
+          done(null, user);
+        } catch (err) {
+          done(err);
+        }
+      },
+    ),
+  );
   console.log('[auth] Discord strategy registered');
 } else {
   console.log('[auth] Discord strategy skipped (missing DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET)');
@@ -68,16 +78,14 @@ if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
 function setupAuthRoutes(app) {
   // Google
   app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }));
-  app.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/' }),
-    (req, res) => res.redirect('/')
+  app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) =>
+    res.redirect('/'),
   );
 
   // Discord
   app.get('/auth/discord', passport.authenticate('discord'));
-  app.get('/auth/discord/callback',
-    passport.authenticate('discord', { failureRedirect: '/' }),
-    (req, res) => res.redirect('/')
+  app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) =>
+    res.redirect('/'),
   );
 
   // Current user

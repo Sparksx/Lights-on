@@ -9,9 +9,20 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const { Server } = require('socket.io');
 const {
-  pool, initDB, getCurrentSeason, addToCosmicWar, recordContribution,
-  getPlayerProfile, updateStreak, getStreakMultiplier, setPlayerContributionRate,
-  getLeaderboard, checkAndEndSeason, getUnclaimedRewards, claimReward, getSeasonInfo,
+  pool,
+  initDB,
+  getCurrentSeason,
+  addToCosmicWar,
+  recordContribution,
+  getPlayerProfile,
+  updateStreak,
+  getStreakMultiplier,
+  setPlayerContributionRate,
+  getLeaderboard,
+  checkAndEndSeason,
+  getUnclaimedRewards,
+  claimReward,
+  getSeasonInfo,
 } = require('./db');
 const { passport, setupAuthRoutes } = require('./auth');
 

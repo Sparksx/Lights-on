@@ -1,224 +1,224 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <title>Light</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>Light</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#000000">
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#000000" />
 
-  <!-- iOS PWA -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Light">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Light" />
+    <link rel="apple-touch-icon" href="icons/icon.svg" />
 
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <!-- Socket.io client (auto-served by the server) -->
-  <script src="/socket.io/socket.io.js" defer></script>
-  <!-- MODE SELECTION LANDING PAGE -->
-  <div id="mode-select">
-    <div id="mode-on" class="mode-half mode-half-dark">
-      <div class="mode-label">ON</div>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Socket.io client (auto-served by the server) -->
+    <script src="/socket.io/socket.io.js" defer></script>
+    <!-- MODE SELECTION LANDING PAGE -->
+    <div id="mode-select">
+      <div id="mode-on" class="mode-half mode-half-dark">
+        <div class="mode-label">ON</div>
+      </div>
+      <div id="mode-off" class="mode-half mode-half-light">
+        <div class="mode-label">OFF</div>
+      </div>
+      <div id="mode-title">LIGHT</div>
     </div>
-    <div id="mode-off" class="mode-half mode-half-light">
-      <div class="mode-label">OFF</div>
+
+    <!-- MULTIPLAYER BALANCE INDICATOR (top-left, hidden until onboarding done) -->
+    <div id="mp-balance" class="hidden">
+      <div id="mp-balance-circle"></div>
+      <div id="mp-balance-pip"></div>
     </div>
-    <div id="mode-title">LIGHT</div>
-  </div>
 
-  <!-- MULTIPLAYER BALANCE INDICATOR (top-left, hidden until onboarding done) -->
-  <div id="mp-balance" class="hidden">
-    <div id="mp-balance-circle"></div>
-    <div id="mp-balance-pip"></div>
-  </div>
+    <!-- MULTIPLAYER OVERLAY (opened by clicking balance indicator) -->
+    <div id="mp-overlay" class="hidden">
+      <div id="mp-overlay-backdrop"></div>
+      <div id="mp-overlay-content">
+        <button id="mp-overlay-close">&times;</button>
+        <div id="mp-overlay-title">L'Équilibre Cosmique</div>
 
-  <!-- MULTIPLAYER OVERLAY (opened by clicking balance indicator) -->
-  <div id="mp-overlay" class="hidden">
-    <div id="mp-overlay-backdrop"></div>
-    <div id="mp-overlay-content">
-      <button id="mp-overlay-close">&times;</button>
-      <div id="mp-overlay-title">L'Équilibre Cosmique</div>
-
-      <!-- Season info -->
-      <div id="mp-overlay-season">
-        <span id="mp-overlay-season-num">Saison 1</span>
-        <span id="mp-overlay-season-timer"></span>
-      </div>
-
-      <div id="mp-overlay-user">
-        <img id="mp-overlay-avatar" src="" alt="">
-        <span id="mp-overlay-name"></span>
-        <span id="mp-overlay-grade"></span>
-        <button id="mp-overlay-logout">Déconnexion</button>
-      </div>
-
-      <div id="mp-overlay-war">
-        <div id="mp-overlay-gauge">
-          <div id="mp-overlay-light-bar"></div>
-          <div id="mp-overlay-dark-bar"></div>
+        <!-- Season info -->
+        <div id="mp-overlay-season">
+          <span id="mp-overlay-season-num">Saison 1</span>
+          <span id="mp-overlay-season-timer"></span>
         </div>
-        <div id="mp-overlay-stats">
-          <span id="mp-overlay-light-total">0</span>
-          <span id="mp-overlay-online">0 en ligne</span>
-          <span id="mp-overlay-dark-total">0</span>
+
+        <div id="mp-overlay-user">
+          <img id="mp-overlay-avatar" src="" alt="" />
+          <span id="mp-overlay-name"></span>
+          <span id="mp-overlay-grade"></span>
+          <button id="mp-overlay-logout">Déconnexion</button>
         </div>
-      </div>
 
-      <!-- Player contribution stats -->
-      <div id="mp-overlay-player" class="hidden">
-        <div id="mp-overlay-player-title">Ma contribution</div>
-        <div id="mp-overlay-player-contrib">0</div>
-        <div id="mp-overlay-player-streak"></div>
-
-        <!-- Contribution rate selector -->
-        <div id="mp-overlay-rate">
-          <div id="mp-overlay-rate-label">Taux de contribution</div>
-          <div id="mp-overlay-rate-btns">
-            <button class="mp-rate-btn" data-rate="10">10%</button>
-            <button class="mp-rate-btn" data-rate="25">25%</button>
-            <button class="mp-rate-btn" data-rate="50">50%</button>
-            <button class="mp-rate-btn" data-rate="100">100%</button>
+        <div id="mp-overlay-war">
+          <div id="mp-overlay-gauge">
+            <div id="mp-overlay-light-bar"></div>
+            <div id="mp-overlay-dark-bar"></div>
           </div>
-          <div id="mp-overlay-rate-desc">Part de vos lumens envoyée à la guerre cosmique</div>
+          <div id="mp-overlay-stats">
+            <span id="mp-overlay-light-total">0</span>
+            <span id="mp-overlay-online">0 en ligne</span>
+            <span id="mp-overlay-dark-total">0</span>
+          </div>
+        </div>
+
+        <!-- Player contribution stats -->
+        <div id="mp-overlay-player" class="hidden">
+          <div id="mp-overlay-player-title">Ma contribution</div>
+          <div id="mp-overlay-player-contrib">0</div>
+          <div id="mp-overlay-player-streak"></div>
+
+          <!-- Contribution rate selector -->
+          <div id="mp-overlay-rate">
+            <div id="mp-overlay-rate-label">Taux de contribution</div>
+            <div id="mp-overlay-rate-btns">
+              <button class="mp-rate-btn" data-rate="10">10%</button>
+              <button class="mp-rate-btn" data-rate="25">25%</button>
+              <button class="mp-rate-btn" data-rate="50">50%</button>
+              <button class="mp-rate-btn" data-rate="100">100%</button>
+            </div>
+            <div id="mp-overlay-rate-desc">Part de vos lumens envoyée à la guerre cosmique</div>
+          </div>
+        </div>
+
+        <!-- Leaderboard button -->
+        <button id="mp-overlay-leaderboard-btn">Classement</button>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD OVERLAY -->
+    <div id="mp-leaderboard" class="hidden">
+      <div id="mp-leaderboard-backdrop"></div>
+      <div id="mp-leaderboard-content">
+        <button id="mp-leaderboard-close">&times;</button>
+        <div id="mp-leaderboard-title">Classement — Saison</div>
+        <div id="mp-leaderboard-tabs">
+          <button class="mp-lb-tab active" data-side="on">Lumière</button>
+          <button class="mp-lb-tab" data-side="off">Ombre</button>
+        </div>
+        <div id="mp-leaderboard-list"></div>
+        <div id="mp-leaderboard-player-rank"></div>
+      </div>
+    </div>
+
+    <!-- SEASON END OVERLAY -->
+    <div id="season-end-overlay" class="hidden">
+      <div id="season-end-backdrop"></div>
+      <div id="season-end-content">
+        <div id="season-end-orb"></div>
+        <div id="season-end-title"></div>
+        <div id="season-end-result"></div>
+        <div id="season-end-stats">
+          <span id="season-end-light">0 lm</span>
+          <span id="season-end-vs">vs</span>
+          <span id="season-end-dark">0 ob</span>
+        </div>
+        <div id="season-end-player">
+          <div id="season-end-grade"></div>
+          <div id="season-end-contrib"></div>
+          <div id="season-end-rank"></div>
+        </div>
+        <div id="season-end-reward">
+          <div id="season-end-reward-text"></div>
+          <div id="season-end-reward-bonus" class="hidden"></div>
+        </div>
+        <button id="season-end-claim" class="hidden">Récupérer</button>
+        <button id="season-end-continue" class="hidden">Nouvelle saison</button>
+      </div>
+    </div>
+
+    <!-- MULTIPLAYER ONBOARDING CINEMATIC -->
+    <div id="mp-onboarding" class="hidden">
+      <div id="mp-onboarding-orb"></div>
+      <div id="mp-onboarding-text1"></div>
+      <div id="mp-onboarding-text2"></div>
+      <div id="mp-onboarding-actions" class="hidden">
+        <button id="mp-onboarding-google" class="mp-onboarding-btn">Google</button>
+        <button id="mp-onboarding-discord" class="mp-onboarding-btn">Discord</button>
+        <button id="mp-onboarding-solo" class="mp-onboarding-btn mp-solo-btn">Continuer seul</button>
+      </div>
+      <button id="mp-onboarding-skip" class="hidden">Passer ›</button>
+    </div>
+
+    <div id="game-area" class="hidden">
+      <canvas id="halo-canvas"></canvas>
+
+      <!-- INTRO OVERLAY (new game only) -->
+      <div id="intro-overlay" class="hidden">
+        <div id="intro-orb"></div>
+        <div id="intro-text"></div>
+        <div id="intro-plea"></div>
+      </div>
+
+      <!-- OFFLINE EARNINGS POPUP -->
+      <div id="offline-popup" class="hidden">
+        <div id="offline-text"></div>
+      </div>
+
+      <div id="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+
+      <div id="upgrade-toggle" class="hidden"></div>
+
+      <div id="upgrade-panel">
+        <div id="upgrade-panel-header">
+          <span id="lumen-counter">0 lm</span>
+          <button id="upgrade-close">&times;</button>
+        </div>
+        <div id="upgrade-list"></div>
+        <div id="panel-footer-btns">
+          <button id="reset-btn">Reset</button>
+          <label id="admin-toggle">
+            <input type="checkbox" id="admin-checkbox" />
+            <span id="admin-slider"></span>
+            <span id="admin-label">Debug (breaks experience)</span>
+          </label>
         </div>
       </div>
 
-      <!-- Leaderboard button -->
-      <button id="mp-overlay-leaderboard-btn">Classement</button>
-    </div>
-  </div>
-
-  <!-- LEADERBOARD OVERLAY -->
-  <div id="mp-leaderboard" class="hidden">
-    <div id="mp-leaderboard-backdrop"></div>
-    <div id="mp-leaderboard-content">
-      <button id="mp-leaderboard-close">&times;</button>
-      <div id="mp-leaderboard-title">Classement — Saison</div>
-      <div id="mp-leaderboard-tabs">
-        <button class="mp-lb-tab active" data-side="on">Lumière</button>
-        <button class="mp-lb-tab" data-side="off">Ombre</button>
-      </div>
-      <div id="mp-leaderboard-list"></div>
-      <div id="mp-leaderboard-player-rank"></div>
-    </div>
-  </div>
-
-  <!-- SEASON END OVERLAY -->
-  <div id="season-end-overlay" class="hidden">
-    <div id="season-end-backdrop"></div>
-    <div id="season-end-content">
-      <div id="season-end-orb"></div>
-      <div id="season-end-title"></div>
-      <div id="season-end-result"></div>
-      <div id="season-end-stats">
-        <span id="season-end-light">0 lm</span>
-        <span id="season-end-vs">vs</span>
-        <span id="season-end-dark">0 ob</span>
-      </div>
-      <div id="season-end-player">
-        <div id="season-end-grade"></div>
-        <div id="season-end-contrib"></div>
-        <div id="season-end-rank"></div>
-      </div>
-      <div id="season-end-reward">
-        <div id="season-end-reward-text"></div>
-        <div id="season-end-reward-bonus" class="hidden"></div>
-      </div>
-      <button id="season-end-claim" class="hidden">Récupérer</button>
-      <button id="season-end-continue" class="hidden">Nouvelle saison</button>
-    </div>
-  </div>
-
-  <!-- MULTIPLAYER ONBOARDING CINEMATIC -->
-  <div id="mp-onboarding" class="hidden">
-    <div id="mp-onboarding-orb"></div>
-    <div id="mp-onboarding-text1"></div>
-    <div id="mp-onboarding-text2"></div>
-    <div id="mp-onboarding-actions" class="hidden">
-      <button id="mp-onboarding-google" class="mp-onboarding-btn">Google</button>
-      <button id="mp-onboarding-discord" class="mp-onboarding-btn">Discord</button>
-      <button id="mp-onboarding-solo" class="mp-onboarding-btn mp-solo-btn">Continuer seul</button>
-    </div>
-    <button id="mp-onboarding-skip" class="hidden">Passer ›</button>
-  </div>
-
-  <div id="game-area" class="hidden">
-    <canvas id="halo-canvas"></canvas>
-
-    <!-- INTRO OVERLAY (new game only) -->
-    <div id="intro-overlay" class="hidden">
-      <div id="intro-orb"></div>
-      <div id="intro-text"></div>
-      <div id="intro-plea"></div>
-    </div>
-
-    <!-- OFFLINE EARNINGS POPUP -->
-    <div id="offline-popup" class="hidden">
-      <div id="offline-text"></div>
-    </div>
-
-    <div id="progress-bar">
-      <div id="progress-fill"></div>
-    </div>
-
-    <div id="upgrade-toggle" class="hidden"></div>
-
-    <div id="upgrade-panel">
-      <div id="upgrade-panel-header">
-        <span id="lumen-counter">0 lm</span>
-        <button id="upgrade-close">&times;</button>
-      </div>
-      <div id="upgrade-list"></div>
-      <div id="panel-footer-btns">
-        <button id="reset-btn">Reset</button>
-        <label id="admin-toggle">
-          <input type="checkbox" id="admin-checkbox">
-          <span id="admin-slider"></span>
-          <span id="admin-label">Debug (breaks experience)</span>
-        </label>
-      </div>
-    </div>
-
-    <div id="switch-container" class="hidden">
-      <div id="switch-hint">Turn on the light</div>
-      <div id="light-switch">
-        <div id="switch-plate">
-          <div id="switch-lever"></div>
+      <div id="switch-container" class="hidden">
+        <div id="switch-hint">Turn on the light</div>
+        <div id="light-switch">
+          <div id="switch-plate">
+            <div id="switch-lever"></div>
+          </div>
         </div>
       </div>
+
+      <div id="victory-screen" class="hidden">
+        <h1 id="victory-title">LIGHTS ON</h1>
+        <p id="victory-text">You brought back the light.</p>
+        <p id="prestige-info"></p>
+        <button id="prestige-btn">Cross Over</button>
+        <button id="restart-btn">Restart</button>
+      </div>
     </div>
 
-    <div id="victory-screen" class="hidden">
-      <h1 id="victory-title">LIGHTS ON</h1>
-      <p id="victory-text">You brought back the light.</p>
-      <p id="prestige-info"></p>
-      <button id="prestige-btn">Cross Over</button>
-      <button id="restart-btn">Restart</button>
-    </div>
-  </div>
+    <script type="module" src="js/main.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        // Auto-reload when a new Service Worker takes control
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
 
-  <script type="module" src="js/main.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      // Auto-reload when a new Service Worker takes control
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-
-      navigator.serviceWorker.register('sw.js').then((reg) => {
-        // Check for SW updates every 60 seconds
-        setInterval(() => reg.update(), 60 * 1000);
-      });
-    }
-  </script>
-</body>
+        navigator.serviceWorker.register('sw.js').then((reg) => {
+          // Check for SW updates every 60 seconds
+          setInterval(() => reg.update(), 60 * 1000);
+        });
+      }
+    </script>
+  </body>
 </html>

@@ -6,8 +6,12 @@ export let prestigeLevel = 0;
 export let prestigeMultiplier = 1;
 export const PRESTIGE_SAVE_KEY = 'light-prestige';
 
-export function setPrestigeLevel(val) { prestigeLevel = val; }
-export function setPrestigeMultiplier(val) { prestigeMultiplier = val; }
+export function setPrestigeLevel(val) {
+  prestigeLevel = val;
+}
+export function setPrestigeMultiplier(val) {
+  prestigeMultiplier = val;
+}
 
 export function loadPrestige() {
   try {
@@ -16,13 +20,13 @@ export function loadPrestige() {
     var data = JSON.parse(raw);
     prestigeLevel = data.level || 0;
     prestigeMultiplier = 1 + prestigeLevel * 0.5;
-  } catch(_) {}
+  } catch (_) {}
 }
 
 export function savePrestige() {
   try {
     localStorage.setItem(PRESTIGE_SAVE_KEY, JSON.stringify({ level: prestigeLevel }));
-  } catch(_) {}
+  } catch (_) {}
 }
 
 loadPrestige();
@@ -32,8 +36,12 @@ loadPrestige();
 export let gameMode = null;
 export let gameStarted = false;
 
-export function setGameMode(mode) { gameMode = mode; }
-export function setGameStarted(val) { gameStarted = val; }
+export function setGameMode(mode) {
+  gameMode = mode;
+}
+export function setGameStarted(val) {
+  gameStarted = val;
+}
 
 // --- State ---
 export const state = {
@@ -56,7 +64,9 @@ export function getSaveKey() {
 // --- Multiplayer prestige bonus (permanent, from season rewards) ---
 export let mpPrestigeBonus = 0;
 
-export function setMpPrestigeBonus(val) { mpPrestigeBonus = val; }
+export function setMpPrestigeBonus(val) {
+  mpPrestigeBonus = val;
+}
 
 export function getTotalPrestigeMultiplier() {
   return prestigeMultiplier + mpPrestigeBonus;

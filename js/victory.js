@@ -1,9 +1,28 @@
 // === Victory — Switch, cinematic, victory screen, prestige, restart ===
 'use strict';
 
-import { state, shared, gameMode, prestigeLevel, setPrestigeLevel, setPrestigeMultiplier, savePrestige, getSaveKey } from './state.js';
+import {
+  state,
+  shared,
+  gameMode,
+  prestigeLevel,
+  setPrestigeLevel,
+  setPrestigeMultiplier,
+  savePrestige,
+  getSaveKey,
+} from './state.js';
 import { _st, _raf, easeOutCubic } from './utils.js';
-import { switchContainer, lightSwitch, switchLever, victoryScreen, prestigeInfo, gameArea, restartBtn, prestigeBtn, resetBtn } from './dom.js';
+import {
+  switchContainer,
+  lightSwitch,
+  switchLever,
+  victoryScreen,
+  prestigeInfo,
+  gameArea,
+  restartBtn,
+  prestigeBtn,
+  resetBtn,
+} from './dom.js';
 import { canvas } from './canvas.js';
 import { resetHalos } from './effects/halos.js';
 import { resetBursts } from './effects/bursts.js';

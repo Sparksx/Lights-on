@@ -1,9 +1,29 @@
 // === Main — Entry point, mode selection, init ===
 'use strict';
 
-import { state, gameMode, gameStarted, setGameMode, setGameStarted, getSaveKey, prestigeLevel, prestigeMultiplier, getTotalPrestigeMultiplier, setMpPrestigeBonus } from './state.js';
+import {
+  state,
+  gameMode,
+  gameStarted,
+  setGameMode,
+  setGameStarted,
+  getSaveKey,
+  prestigeLevel,
+  prestigeMultiplier,
+  getTotalPrestigeMultiplier,
+  setMpPrestigeBonus,
+} from './state.js';
 import { _st, _si, _now, formatNumber, unitName } from './utils.js';
-import { modeSelect, modeOn, modeOff, gameArea, upgradeToggle, upgradePanel, victoryScreen, prestigeInfo } from './dom.js';
+import {
+  modeSelect,
+  modeOn,
+  modeOff,
+  gameArea,
+  upgradeToggle,
+  upgradePanel,
+  victoryScreen,
+  prestigeInfo,
+} from './dom.js';
 import { resizeCanvas } from './canvas.js';
 import { save, load } from './save.js';
 import { recalcPassive, checkMilestones, renderUpgrades, setupUpgradeListeners } from './upgrades.js';
@@ -13,7 +33,15 @@ import { showIntro } from './intro.js';
 import { setupInputListeners } from './click.js';
 import { showSwitch, setupVictoryListeners } from './victory.js';
 import { regenerateStars } from './effects/stars.js';
-import { initMultiplayer, mp, onMultiplayerUpdate, onSeasonEnd, onRewardReceived, notifySideChange, setContributionRate } from './multiplayer.js';
+import {
+  initMultiplayer,
+  mp,
+  onMultiplayerUpdate,
+  onSeasonEnd,
+  onRewardReceived,
+  notifySideChange,
+  setContributionRate,
+} from './multiplayer.js';
 import { setServerAvailable, isOnboardingDone, isMultiplayerActive, checkOnboarding } from './onboarding.js';
 import { showSeasonEnd, showSeasonEndBroadcast } from './season-end.js';
 
@@ -46,7 +74,9 @@ function startGame(mode) {
   }
 
   // Save chosen mode
-  try { localStorage.setItem('light-game-mode', mode); } catch (_) {}
+  try {
+    localStorage.setItem('light-game-mode', mode);
+  } catch (_) {}
 
   // After animation, reveal the game
   _st(function () {
@@ -89,12 +119,18 @@ function initGame() {
           offlinePopup.classList.remove('hidden');
           offlinePopup.addEventListener('click', function dismissOffline() {
             offlinePopup.classList.add('fade-out');
-            _st(function () { offlinePopup.classList.add('hidden'); offlinePopup.classList.remove('fade-out'); }, 600);
+            _st(function () {
+              offlinePopup.classList.add('hidden');
+              offlinePopup.classList.remove('fade-out');
+            }, 600);
             offlinePopup.removeEventListener('click', dismissOffline);
           });
           _st(function () {
             offlinePopup.classList.add('fade-out');
-            _st(function () { offlinePopup.classList.add('hidden'); offlinePopup.classList.remove('fade-out'); }, 600);
+            _st(function () {
+              offlinePopup.classList.add('hidden');
+              offlinePopup.classList.remove('fade-out');
+            }, 600);
           }, 4000);
         }
       }
@@ -134,8 +170,14 @@ function initGame() {
 }
 
 // --- Mode selection ---
-modeOn.addEventListener('click', function () { startGame('on'); notifySideChange('on'); });
-modeOff.addEventListener('click', function () { startGame('off'); notifySideChange('off'); });
+modeOn.addEventListener('click', function () {
+  startGame('on');
+  notifySideChange('on');
+});
+modeOff.addEventListener('click', function () {
+  startGame('off');
+  notifySideChange('off');
+});
 
 // Check for saved game — skip landing if save exists
 (function checkSavedGame() {
@@ -158,36 +200,36 @@ modeOff.addEventListener('click', function () { startGame('off'); notifySideChan
 // =============================================
 
 // DOM refs for multiplayer UI
-var mpBalance       = document.getElementById('mp-balance');
+var mpBalance = document.getElementById('mp-balance');
 var mpBalanceCircle = document.getElementById('mp-balance-circle');
-var mpOverlay       = document.getElementById('mp-overlay');
-var mpOverlayClose  = document.getElementById('mp-overlay-close');
+var mpOverlay = document.getElementById('mp-overlay');
+var mpOverlayClose = document.getElementById('mp-overlay-close');
 var mpOverlayBackdrop = document.getElementById('mp-overlay-backdrop');
 var mpOverlayAvatar = document.getElementById('mp-overlay-avatar');
-var mpOverlayName   = document.getElementById('mp-overlay-name');
-var mpOverlayGrade  = document.getElementById('mp-overlay-grade');
+var mpOverlayName = document.getElementById('mp-overlay-name');
+var mpOverlayGrade = document.getElementById('mp-overlay-grade');
 var mpOverlayLogout = document.getElementById('mp-overlay-logout');
-var mpOverlayLightBar   = document.getElementById('mp-overlay-light-bar');
-var mpOverlayDarkBar    = document.getElementById('mp-overlay-dark-bar');
+var mpOverlayLightBar = document.getElementById('mp-overlay-light-bar');
+var mpOverlayDarkBar = document.getElementById('mp-overlay-dark-bar');
 var mpOverlayLightTotal = document.getElementById('mp-overlay-light-total');
-var mpOverlayDarkTotal  = document.getElementById('mp-overlay-dark-total');
-var mpOverlayOnline     = document.getElementById('mp-overlay-online');
-var mpOverlaySeasonNum  = document.getElementById('mp-overlay-season-num');
+var mpOverlayDarkTotal = document.getElementById('mp-overlay-dark-total');
+var mpOverlayOnline = document.getElementById('mp-overlay-online');
+var mpOverlaySeasonNum = document.getElementById('mp-overlay-season-num');
 var mpOverlaySeasonTimer = document.getElementById('mp-overlay-season-timer');
-var mpOverlaySeason     = document.getElementById('mp-overlay-season');
-var mpOverlayPlayer     = document.getElementById('mp-overlay-player');
+var mpOverlaySeason = document.getElementById('mp-overlay-season');
+var mpOverlayPlayer = document.getElementById('mp-overlay-player');
 var mpOverlayPlayerContrib = document.getElementById('mp-overlay-player-contrib');
-var mpOverlayPlayerStreak  = document.getElementById('mp-overlay-player-streak');
-var mpOverlayRateBtns   = document.querySelectorAll('.mp-rate-btn');
+var mpOverlayPlayerStreak = document.getElementById('mp-overlay-player-streak');
+var mpOverlayRateBtns = document.querySelectorAll('.mp-rate-btn');
 var mpOverlayLeaderboardBtn = document.getElementById('mp-overlay-leaderboard-btn');
 
 // Leaderboard DOM
-var mpLeaderboard        = document.getElementById('mp-leaderboard');
+var mpLeaderboard = document.getElementById('mp-leaderboard');
 var mpLeaderboardBackdrop = document.getElementById('mp-leaderboard-backdrop');
-var mpLeaderboardClose   = document.getElementById('mp-leaderboard-close');
-var mpLeaderboardTitle   = document.getElementById('mp-leaderboard-title');
-var mpLeaderboardTabs    = document.querySelectorAll('.mp-lb-tab');
-var mpLeaderboardList    = document.getElementById('mp-leaderboard-list');
+var mpLeaderboardClose = document.getElementById('mp-leaderboard-close');
+var mpLeaderboardTitle = document.getElementById('mp-leaderboard-title');
+var mpLeaderboardTabs = document.querySelectorAll('.mp-lb-tab');
+var mpLeaderboardList = document.getElementById('mp-leaderboard-list');
 var mpLeaderboardPlayerRank = document.getElementById('mp-leaderboard-player-rank');
 
 function formatShort(n) {
@@ -252,8 +294,8 @@ function updateMultiplayerUI(mpState) {
   // Overlay war gauge
   var total = light + dark;
   if (total > 0) {
-    mpOverlayLightBar.style.width = ((light / total) * 100) + '%';
-    mpOverlayDarkBar.style.width = ((dark / total) * 100) + '%';
+    mpOverlayLightBar.style.width = (light / total) * 100 + '%';
+    mpOverlayDarkBar.style.width = (dark / total) * 100 + '%';
   } else {
     mpOverlayLightBar.style.width = '50%';
     mpOverlayDarkBar.style.width = '50%';
@@ -280,7 +322,8 @@ function updateMultiplayerUI(mpState) {
   // Player contribution section
   if (mpState.user && mpState.profile) {
     mpOverlayPlayer.classList.remove('hidden');
-    mpOverlayPlayerContrib.textContent = formatShort(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
+    mpOverlayPlayerContrib.textContent =
+      formatShort(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
 
     if (mpState.profile.streakDays > 0) {
       var streakText = mpState.profile.streakDays + 'j consécutifs';
@@ -390,7 +433,9 @@ mpLeaderboardTabs.forEach(function (tab) {
   tab.addEventListener('click', function (e) {
     e.stopPropagation();
     currentLeaderboardSide = tab.dataset.side;
-    mpLeaderboardTabs.forEach(function (t) { t.classList.remove('active'); });
+    mpLeaderboardTabs.forEach(function (t) {
+      t.classList.remove('active');
+    });
     tab.classList.add('active');
     renderLeaderboard();
   });
@@ -398,7 +443,9 @@ mpLeaderboardTabs.forEach(function (tab) {
 
 function fetchLeaderboard() {
   fetch('/api/leaderboard')
-    .then(function (res) { return res.json(); })
+    .then(function (res) {
+      return res.json();
+    })
     .then(function (data) {
       leaderboardData = data;
       mpLeaderboardTitle.textContent = 'Classement — Saison ' + (data.season || '');
@@ -453,8 +500,7 @@ function renderLeaderboard() {
   // Player's own rank
   if (leaderboardData.playerRank && leaderboardData.playerRank.side === currentLeaderboardSide) {
     mpLeaderboardPlayerRank.textContent =
-      'Votre rang : #' + leaderboardData.playerRank.rank +
-      ' (' + formatShort(leaderboardData.playerRank.total) + ')';
+      'Votre rang : #' + leaderboardData.playerRank.rank + ' (' + formatShort(leaderboardData.playerRank.total) + ')';
   } else {
     mpLeaderboardPlayerRank.textContent = '';
   }
@@ -485,27 +531,31 @@ window._onOnboardingDone = function (choice) {
 
 // --- Init multiplayer silently ---
 (function initMP() {
-  initMultiplayer().then(function () {
-    setServerAvailable(true);
+  initMultiplayer()
+    .then(function () {
+      setServerAvailable(true);
 
-    // If user is already logged in (returned from OAuth), mark onboarding done
-    if (mp.user) {
-      try { localStorage.setItem('light-mp-onboarding', 'connected'); } catch (_) {}
-    }
+      // If user is already logged in (returned from OAuth), mark onboarding done
+      if (mp.user) {
+        try {
+          localStorage.setItem('light-mp-onboarding', 'connected');
+        } catch (_) {}
+      }
 
-    // If onboarding was already completed with 'connected', show balance indicator
-    if (isMultiplayerActive()) {
-      mpBalance.classList.remove('hidden');
-      if (mp.connected) mpBalance.classList.add('online');
-      updateMultiplayerUI(mp);
-    }
+      // If onboarding was already completed with 'connected', show balance indicator
+      if (isMultiplayerActive()) {
+        mpBalance.classList.remove('hidden');
+        if (mp.connected) mpBalance.classList.add('online');
+        updateMultiplayerUI(mp);
+      }
 
-    // If onboarding hasn't been done yet and threshold met, it will trigger
-    // from checkMilestones() during gameplay
-    // Also check now in case we're loading a save above threshold
-    checkOnboarding();
-  }).catch(function () {
-    // Server not available — multiplayer stays invisible
-    setServerAvailable(false);
-  });
+      // If onboarding hasn't been done yet and threshold met, it will trigger
+      // from checkMilestones() during gameplay
+      // Also check now in case we're loading a save above threshold
+      checkOnboarding();
+    })
+    .catch(function () {
+      // Server not available — multiplayer stays invisible
+      setServerAvailable(false);
+    });
 })();

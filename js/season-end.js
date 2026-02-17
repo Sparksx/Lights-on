@@ -6,22 +6,32 @@ import { _st } from './utils.js';
 import { mp, claimReward } from './multiplayer.js';
 
 // --- DOM refs (lazy) ---
-var overlay, title, result, statsLight, statsDark, playerGrade, playerContrib,
-    playerRank, rewardText, rewardBonus, claimBtn, continueBtn;
+var overlay,
+  title,
+  result,
+  statsLight,
+  statsDark,
+  playerGrade,
+  playerContrib,
+  playerRank,
+  rewardText,
+  rewardBonus,
+  claimBtn,
+  continueBtn;
 
 function grabDOM() {
-  overlay       = document.getElementById('season-end-overlay');
-  title         = document.getElementById('season-end-title');
-  result        = document.getElementById('season-end-result');
-  statsLight    = document.getElementById('season-end-light');
-  statsDark     = document.getElementById('season-end-dark');
-  playerGrade   = document.getElementById('season-end-grade');
+  overlay = document.getElementById('season-end-overlay');
+  title = document.getElementById('season-end-title');
+  result = document.getElementById('season-end-result');
+  statsLight = document.getElementById('season-end-light');
+  statsDark = document.getElementById('season-end-dark');
+  playerGrade = document.getElementById('season-end-grade');
   playerContrib = document.getElementById('season-end-contrib');
-  playerRank    = document.getElementById('season-end-rank');
-  rewardText    = document.getElementById('season-end-reward-text');
-  rewardBonus   = document.getElementById('season-end-reward-bonus');
-  claimBtn      = document.getElementById('season-end-claim');
-  continueBtn   = document.getElementById('season-end-continue');
+  playerRank = document.getElementById('season-end-rank');
+  rewardText = document.getElementById('season-end-reward-text');
+  rewardBonus = document.getElementById('season-end-reward-bonus');
+  claimBtn = document.getElementById('season-end-claim');
+  continueBtn = document.getElementById('season-end-continue');
 }
 
 function formatShort(n) {
@@ -41,13 +51,12 @@ export function showSeasonEnd(reward) {
   if (!overlay) return;
 
   var isOff = gameMode === 'off';
-  var winnerLabel = reward.winner === 'light' ? 'La Lumière' :
-                    reward.winner === 'dark' ? 'L\'Ombre' : 'Égalité';
+  var winnerLabel = reward.winner === 'light' ? 'La Lumière' : reward.winner === 'dark' ? "L'Ombre" : 'Égalité';
 
   title.textContent = 'Saison ' + reward.season + ' terminée';
 
   if (reward.winner === 'draw') {
-    result.textContent = 'Ni lumière ni ombre n\'a triomphé.';
+    result.textContent = "Ni lumière ni ombre n'a triomphé.";
   } else if (reward.won) {
     result.textContent = winnerLabel + ' a triomphé — Victoire\u00a0!';
   } else {
@@ -123,8 +132,7 @@ export function showSeasonEndBroadcast(data) {
   grabDOM();
   if (!overlay) return;
 
-  var winnerLabel = data.winner === 'light' ? 'La Lumière' :
-                    data.winner === 'dark' ? 'L\'Ombre' : 'Égalité';
+  var winnerLabel = data.winner === 'light' ? 'La Lumière' : data.winner === 'dark' ? "L'Ombre" : 'Égalité';
 
   title.textContent = 'Saison ' + data.endedSeason + ' terminée';
   result.textContent = winnerLabel + ' a triomphé\u00a0!';

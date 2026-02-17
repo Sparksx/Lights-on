@@ -41,9 +41,12 @@ function startBigBang() {
     if ((h.type === 'glow' || h.type === 'persist') && h.life > 0.1) {
       hasLight = true;
       bigBangParticles.push({
-        x: h.x, y: h.y,
-        originX: h.x, originY: h.y,
-        targetX: cx, targetY: cy,
+        x: h.x,
+        y: h.y,
+        originX: h.x,
+        originY: h.y,
+        targetX: cx,
+        targetY: cy,
         size: 2 + Math.random() * 4,
         alpha: 0.5 + Math.random() * 0.5,
         phase: 0,
@@ -56,9 +59,12 @@ function startBigBang() {
   for (const b of lightBursts) {
     hasLight = true;
     bigBangParticles.push({
-      x: b.x, y: b.y,
-      originX: b.x, originY: b.y,
-      targetX: cx, targetY: cy,
+      x: b.x,
+      y: b.y,
+      originX: b.x,
+      originY: b.y,
+      targetX: cx,
+      targetY: cy,
       size: 3 + Math.random() * 5,
       alpha: 0.6 + Math.random() * 0.4,
       phase: 0,
@@ -69,9 +75,12 @@ function startBigBang() {
 
   for (const s of bgStars) {
     bigBangParticles.push({
-      x: s.x, y: s.y,
-      originX: s.x, originY: s.y,
-      targetX: cx, targetY: cy,
+      x: s.x,
+      y: s.y,
+      originX: s.x,
+      originY: s.y,
+      targetX: cx,
+      targetY: cy,
       size: s.size + 1,
       alpha: 0.3 + Math.random() * 0.5,
       phase: 0,
@@ -85,14 +94,26 @@ function startBigBang() {
     for (let i = 0; i < edgeCount; i++) {
       let ex, ey;
       const side = Math.floor(Math.random() * 4);
-      if (side === 0) { ex = Math.random() * canvas.width; ey = -5; }
-      else if (side === 1) { ex = canvas.width + 5; ey = Math.random() * canvas.height; }
-      else if (side === 2) { ex = Math.random() * canvas.width; ey = canvas.height + 5; }
-      else { ex = -5; ey = Math.random() * canvas.height; }
+      if (side === 0) {
+        ex = Math.random() * canvas.width;
+        ey = -5;
+      } else if (side === 1) {
+        ex = canvas.width + 5;
+        ey = Math.random() * canvas.height;
+      } else if (side === 2) {
+        ex = Math.random() * canvas.width;
+        ey = canvas.height + 5;
+      } else {
+        ex = -5;
+        ey = Math.random() * canvas.height;
+      }
       bigBangParticles.push({
-        x: ex, y: ey,
-        originX: ex, originY: ey,
-        targetX: cx, targetY: cy,
+        x: ex,
+        y: ey,
+        originX: ex,
+        originY: ey,
+        targetX: cx,
+        targetY: cy,
         size: 1 + Math.random() * 3,
         alpha: 0.3 + Math.random() * 0.5,
         phase: 0,
