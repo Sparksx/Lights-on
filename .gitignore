@@ -1,3 +1,21 @@
 node_modules/
 server/.env
 .env
+
+# Build
+dist/
+
+# Test
+tests/e2e/results/
+test-results/
+playwright-report/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
