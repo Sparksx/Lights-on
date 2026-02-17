@@ -14,6 +14,7 @@ import { setupInputListeners } from './click.js';
 import { showSwitch, setupVictoryListeners } from './victory.js';
 import { regenerateStars } from './effects/stars.js';
 import { initMultiplayer, mp, onMultiplayerUpdate, notifySideChange } from './multiplayer.js';
+import { setServerAvailable, isOnboardingDone, isMultiplayerActive, checkOnboarding } from './onboarding.js';
 
 function startGame(mode) {
   if (gameStarted) return;
@@ -151,18 +152,24 @@ modeOff.addEventListener('click', function () { startGame('off'); notifySideChan
   } catch (_) {}
 })();
 
-// --- Multiplayer UI ---
-var mpBar = document.getElementById('mp-bar');
-var mpLoginBtns = document.getElementById('mp-login-btns');
-var mpProfile = document.getElementById('mp-profile');
-var mpAvatar = document.getElementById('mp-avatar');
-var mpName = document.getElementById('mp-name');
-var mpLogout = document.getElementById('mp-logout');
-var cosmicLight = document.getElementById('cosmic-light');
-var cosmicDark = document.getElementById('cosmic-dark');
-var cosmicLightCount = document.getElementById('cosmic-light-count');
-var cosmicDarkCount = document.getElementById('cosmic-dark-count');
-var cosmicOnline = document.getElementById('cosmic-online');
+// =============================================
+//  MULTIPLAYER — Progressive UI
+// =============================================
+
+// DOM refs for multiplayer UI
+var mpBalance       = document.getElementById('mp-balance');
+var mpBalanceCircle = document.getElementById('mp-balance-circle');
+var mpOverlay       = document.getElementById('mp-overlay');
+var mpOverlayClose  = document.getElementById('mp-overlay-close');
+var mpOverlayBackdrop = document.getElementById('mp-overlay-backdrop');
+var mpOverlayAvatar = document.getElementById('mp-overlay-avatar');
+var mpOverlayName   = document.getElementById('mp-overlay-name');
+var mpOverlayLogout = document.getElementById('mp-overlay-logout');
+var mpOverlayLightBar   = document.getElementById('mp-overlay-light-bar');
+var mpOverlayDarkBar    = document.getElementById('mp-overlay-dark-bar');
+var mpOverlayLightTotal = document.getElementById('mp-overlay-light-total');
+var mpOverlayDarkTotal  = document.getElementById('mp-overlay-dark-total');
+var mpOverlayOnline     = document.getElementById('mp-overlay-online');
 
 function formatShort(n) {
   if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
@@ -172,44 +179,91 @@ function formatShort(n) {
   return String(n);
 }
 
-function updateMultiplayerUI(state) {
-  // Auth
-  if (state.user) {
-    mpLoginBtns.classList.add('hidden');
-    mpProfile.classList.remove('hidden');
-    mpName.textContent = state.user.displayName;
-    if (state.user.avatar) {
-      mpAvatar.src = state.user.avatar;
-      mpAvatar.style.display = '';
-    } else {
-      mpAvatar.style.display = 'none';
-    }
-  } else {
-    mpLoginBtns.classList.remove('hidden');
-    mpProfile.classList.add('hidden');
+// --- Update balance indicator circle proportions ---
+function updateBalanceCircle(light, dark) {
+  var total = light + dark;
+  var lightPct = total > 0 ? (light / total) * 100 : 50;
+
+  // For ON mode: white = light side, starts from top (270deg)
+  // For OFF mode: colors swap via CSS, same logic
+  mpBalanceCircle.style.background =
+    'conic-gradient(from 270deg, #fff 0%, #fff ' + lightPct + '%, #000 ' + lightPct + '%, #000 100%)';
+
+  // In OFF mode, the CSS override swaps the colors
+  if (gameMode === 'off') {
+    mpBalanceCircle.style.background =
+      'conic-gradient(from 270deg, #000 0%, #000 ' + lightPct + '%, #fff ' + lightPct + '%, #fff 100%)';
+  }
+}
+
+// --- Update the full overlay with current multiplayer state ---
+function updateMultiplayerUI(mpState) {
+  // Balance indicator: only show if onboarding is done and user connected
+  if (isMultiplayerActive() && mpState.connected) {
+    mpBalance.classList.remove('hidden');
+    mpBalance.classList.add('online');
   }
 
-  // Cosmic war gauge
-  var light = state.cosmicWar.totalLight;
-  var dark = state.cosmicWar.totalDark;
+  // Update balance proportions
+  var light = mpState.cosmicWar.totalLight;
+  var dark = mpState.cosmicWar.totalDark;
+  updateBalanceCircle(light, dark);
+
+  // Overlay user info
+  if (mpState.user) {
+    mpOverlayName.textContent = mpState.user.displayName;
+    if (mpState.user.avatar) {
+      mpOverlayAvatar.src = mpState.user.avatar;
+      mpOverlayAvatar.style.display = '';
+    } else {
+      mpOverlayAvatar.style.display = 'none';
+    }
+    mpOverlayLogout.style.display = '';
+  } else {
+    mpOverlayName.textContent = '';
+    mpOverlayAvatar.style.display = 'none';
+    mpOverlayLogout.style.display = 'none';
+  }
+
+  // Overlay war gauge
   var total = light + dark;
   if (total > 0) {
-    cosmicLight.style.width = ((light / total) * 100) + '%';
-    cosmicDark.style.width = ((dark / total) * 100) + '%';
+    mpOverlayLightBar.style.width = ((light / total) * 100) + '%';
+    mpOverlayDarkBar.style.width = ((dark / total) * 100) + '%';
   } else {
-    cosmicLight.style.width = '50%';
-    cosmicDark.style.width = '50%';
+    mpOverlayLightBar.style.width = '50%';
+    mpOverlayDarkBar.style.width = '50%';
   }
-  cosmicLightCount.textContent = formatShort(light);
-  cosmicDarkCount.textContent = formatShort(dark);
-
-  // Online count
-  cosmicOnline.textContent = state.online.total + ' online';
+  mpOverlayLightTotal.textContent = formatShort(light);
+  mpOverlayDarkTotal.textContent = formatShort(dark);
+  mpOverlayOnline.textContent = mpState.online.total + ' en ligne';
 }
 
 onMultiplayerUpdate(updateMultiplayerUI);
 
-mpLogout.addEventListener('click', function (e) {
+// --- Balance indicator: open overlay on click ---
+mpBalance.addEventListener('click', function (e) {
+  e.stopPropagation();
+  mpOverlay.classList.remove('hidden');
+});
+
+// --- Close overlay ---
+function closeOverlay() {
+  mpOverlay.classList.add('hidden');
+}
+
+mpOverlayClose.addEventListener('click', function (e) {
+  e.stopPropagation();
+  closeOverlay();
+});
+
+mpOverlayBackdrop.addEventListener('click', function (e) {
+  e.stopPropagation();
+  closeOverlay();
+});
+
+// --- Logout from overlay ---
+mpOverlayLogout.addEventListener('click', function (e) {
   e.stopPropagation();
   fetch('/auth/logout', { method: 'POST' }).then(function () {
     mp.user = null;
@@ -217,14 +271,39 @@ mpLogout.addEventListener('click', function (e) {
   });
 });
 
-// Show multiplayer bar once game starts, init connection
-var origStartGame = startGame;
+// --- Onboarding completion callback ---
+window._onOnboardingDone = function (choice) {
+  if (choice === 'connected') {
+    // User chose to connect — OAuth redirect will handle the rest
+  } else {
+    // User chose solo — hide multiplayer permanently for this session
+    mpBalance.classList.add('hidden');
+  }
+};
+
+// --- Init multiplayer silently ---
 (function initMP() {
   initMultiplayer().then(function () {
-    mpBar.classList.remove('hidden');
-    updateMultiplayerUI(mp);
+    setServerAvailable(true);
+
+    // If user is already logged in (returned from OAuth), mark onboarding done
+    if (mp.user) {
+      try { localStorage.setItem('light-mp-onboarding', 'connected'); } catch (_) {}
+    }
+
+    // If onboarding was already completed with 'connected', show balance indicator
+    if (isMultiplayerActive()) {
+      mpBalance.classList.remove('hidden');
+      if (mp.connected) mpBalance.classList.add('online');
+      updateMultiplayerUI(mp);
+    }
+
+    // If onboarding hasn't been done yet and threshold met, it will trigger
+    // from checkMilestones() during gameplay
+    // Also check now in case we're loading a save above threshold
+    checkOnboarding();
   }).catch(function () {
-    // Server not available (local dev without server) — hide mp bar
-    mpBar.classList.add('hidden');
+    // Server not available — multiplayer stays invisible
+    setServerAvailable(false);
   });
 })();

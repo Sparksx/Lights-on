@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lights-on-v8';
+const CACHE_NAME = 'lights-on-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -18,6 +18,7 @@ const ASSETS = [
   './js/intro.js',
   './js/game-loop.js',
   './js/multiplayer.js',
+  './js/onboarding.js',
   './js/effects/halos.js',
   './js/effects/stars.js',
   './js/effects/constellations.js',
