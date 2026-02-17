@@ -10,11 +10,20 @@ import { clickLightBurst } from './effects/bursts.js';
 import { startPrismHold, movePrismHold, endPrismHold } from './effects/prism.js';
 import { startConstellationDrag, moveConstellationDrag, endConstellationDrag } from './effects/constellations.js';
 import {
-  startRub, moveRub, endRub,
-  comboTimer, COMBO_DECAY,
-  incrementCombo, resetCombo, setComboTimer,
-  getComboMultiplier, showComboGlow,
-  acRecordClick, acDetect, acTriggerPenalty, acIsPenaltyActive,
+  startRub,
+  moveRub,
+  endRub,
+  comboTimer,
+  COMBO_DECAY,
+  incrementCombo,
+  resetCombo,
+  setComboTimer,
+  getComboMultiplier,
+  showComboGlow,
+  acRecordClick,
+  acDetect,
+  acTriggerPenalty,
+  acIsPenaltyActive,
 } from './interaction.js';
 import { checkMilestones } from './upgrades.js';
 import { updateUI } from './ui.js';
@@ -30,7 +39,12 @@ function handleClick(e) {
   if (acIsPenaltyActive()) return;
 
   // Don't count clicks on UI elements
-  if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#switch-container')) return;
+  if (
+    e.target.closest('#upgrade-panel') ||
+    e.target.closest('#upgrade-toggle') ||
+    e.target.closest('#switch-container')
+  )
+    return;
 
   const x = e.clientX || (e.touches && e.touches[0].clientX);
   const y = e.clientY || (e.touches && e.touches[0].clientY);
@@ -50,9 +64,11 @@ function handleClick(e) {
   // Combo tracking
   incrementCombo();
   if (comboTimer) clearTimeout(comboTimer);
-  setComboTimer(_st(function () {
-    resetCombo();
-  }, COMBO_DECAY));
+  setComboTimer(
+    _st(function () {
+      resetCombo();
+    }, COMBO_DECAY),
+  );
 
   const multiplier = getComboMultiplier();
   const gain = Math.floor(state.clickPower * multiplier * getTotalPrestigeMultiplier());
@@ -80,12 +96,15 @@ function handleClick(e) {
   const lightningCount = getUpgradeCount('lightning');
   if (lightningCount > 0) {
     if (gameMode === 'off') {
-      const hasFlash = halos.some(function (h) { return h.type === 'screen-darken' && h.life > 0.5; });
+      const hasFlash = halos.some(function (h) {
+        return h.type === 'screen-darken' && h.life > 0.5;
+      });
       if (!hasFlash) {
         const darkenIntensity = Math.min(0.06 + lightningCount * 0.01, 0.15);
         halos.push({
           type: 'screen-darken',
-          x: 0, y: 0,
+          x: 0,
+          y: 0,
           maxRadius: 0,
           opacity: darkenIntensity,
           life: 1.0,
@@ -98,12 +117,15 @@ function handleClick(e) {
         }
       }
     } else {
-      const hasFlash = halos.some(function (h) { return h.type === 'screen-flash' && h.life > 0.5; });
+      const hasFlash = halos.some(function (h) {
+        return h.type === 'screen-flash' && h.life > 0.5;
+      });
       if (!hasFlash) {
         const flashIntensity = Math.min(0.04 + lightningCount * 0.008, 0.12);
         halos.push({
           type: 'screen-flash',
-          x: 0, y: 0,
+          x: 0,
+          y: 0,
           maxRadius: 0,
           opacity: flashIntensity,
           life: 1.0,
@@ -124,20 +146,35 @@ function handleClick(e) {
 export function setupInputListeners() {
   gameArea.addEventListener('click', handleClick);
 
-  gameArea.addEventListener('touchstart', function (e) {
-    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#victory-screen') || e.target.closest('#switch-container')) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    shared.mouseX = touch.clientX;
-    shared.mouseY = touch.clientY;
-    startRub(touch.clientX, touch.clientY);
-    startPrismHold(touch.clientX, touch.clientY, acIsPenaltyActive);
-    startConstellationDrag(touch.clientX, touch.clientY, acIsPenaltyActive);
-    handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target, _trustedTouch: e.isTrusted });
-  }, { passive: false });
+  gameArea.addEventListener(
+    'touchstart',
+    function (e) {
+      if (
+        e.target.closest('#upgrade-panel') ||
+        e.target.closest('#upgrade-toggle') ||
+        e.target.closest('#victory-screen') ||
+        e.target.closest('#switch-container')
+      )
+        return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      shared.mouseX = touch.clientX;
+      shared.mouseY = touch.clientY;
+      startRub(touch.clientX, touch.clientY);
+      startPrismHold(touch.clientX, touch.clientY, acIsPenaltyActive);
+      startConstellationDrag(touch.clientX, touch.clientY, acIsPenaltyActive);
+      handleClick({ clientX: touch.clientX, clientY: touch.clientY, target: e.target, _trustedTouch: e.isTrusted });
+    },
+    { passive: false },
+  );
 
   gameArea.addEventListener('mousedown', function (e) {
-    if (e.target.closest('#upgrade-panel') || e.target.closest('#upgrade-toggle') || e.target.closest('#switch-container')) return;
+    if (
+      e.target.closest('#upgrade-panel') ||
+      e.target.closest('#upgrade-toggle') ||
+      e.target.closest('#switch-container')
+    )
+      return;
     startRub(e.clientX, e.clientY);
     startPrismHold(e.clientX, e.clientY, acIsPenaltyActive);
     startConstellationDrag(e.clientX, e.clientY, acIsPenaltyActive);
@@ -152,20 +189,40 @@ export function setupInputListeners() {
     moveConstellationDrag(e.clientX, e.clientY, checkMilestones, updateUI);
   });
 
-  gameArea.addEventListener('mouseup', function () { endRub(); endPrismHold(); endConstellationDrag(); });
-  gameArea.addEventListener('mouseleave', function () { endRub(); endPrismHold(); endConstellationDrag(); });
+  gameArea.addEventListener('mouseup', function () {
+    endRub();
+    endPrismHold();
+    endConstellationDrag();
+  });
+  gameArea.addEventListener('mouseleave', function () {
+    endRub();
+    endPrismHold();
+    endConstellationDrag();
+  });
 
-  gameArea.addEventListener('touchmove', function (e) {
-    if (e.target.closest('#upgrade-panel')) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    shared.mouseX = touch.clientX;
-    shared.mouseY = touch.clientY;
-    moveRub(touch.clientX, touch.clientY, checkMilestones, updateUI);
-    movePrismHold(touch.clientX, touch.clientY);
-    moveConstellationDrag(touch.clientX, touch.clientY, checkMilestones, updateUI);
-  }, { passive: false });
+  gameArea.addEventListener(
+    'touchmove',
+    function (e) {
+      if (e.target.closest('#upgrade-panel')) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      shared.mouseX = touch.clientX;
+      shared.mouseY = touch.clientY;
+      moveRub(touch.clientX, touch.clientY, checkMilestones, updateUI);
+      movePrismHold(touch.clientX, touch.clientY);
+      moveConstellationDrag(touch.clientX, touch.clientY, checkMilestones, updateUI);
+    },
+    { passive: false },
+  );
 
-  gameArea.addEventListener('touchend', function () { endRub(); endPrismHold(); endConstellationDrag(); });
-  gameArea.addEventListener('touchcancel', function () { endRub(); endPrismHold(); endConstellationDrag(); });
+  gameArea.addEventListener('touchend', function () {
+    endRub();
+    endPrismHold();
+    endConstellationDrag();
+  });
+  gameArea.addEventListener('touchcancel', function () {
+    endRub();
+    endPrismHold();
+    endConstellationDrag();
+  });
 }

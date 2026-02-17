@@ -28,10 +28,27 @@ function spawnPrismRay() {
   const side = Math.floor(Math.random() * 4);
   let startX, startY, endX, endY;
 
-  if (side === 0) { startX = -10; startY = h * 0.2 + Math.random() * h * 0.6; endX = w + 10; endY = h * 0.2 + Math.random() * h * 0.6; }
-  else if (side === 1) { startX = w * 0.2 + Math.random() * w * 0.6; startY = -10; endX = w * 0.2 + Math.random() * w * 0.6; endY = h + 10; }
-  else if (side === 2) { startX = w + 10; startY = h * 0.2 + Math.random() * h * 0.6; endX = -10; endY = h * 0.2 + Math.random() * h * 0.6; }
-  else { startX = w * 0.2 + Math.random() * w * 0.6; startY = h + 10; endX = w * 0.2 + Math.random() * w * 0.6; endY = -10; }
+  if (side === 0) {
+    startX = -10;
+    startY = h * 0.2 + Math.random() * h * 0.6;
+    endX = w + 10;
+    endY = h * 0.2 + Math.random() * h * 0.6;
+  } else if (side === 1) {
+    startX = w * 0.2 + Math.random() * w * 0.6;
+    startY = -10;
+    endX = w * 0.2 + Math.random() * w * 0.6;
+    endY = h + 10;
+  } else if (side === 2) {
+    startX = w + 10;
+    startY = h * 0.2 + Math.random() * h * 0.6;
+    endX = -10;
+    endY = h * 0.2 + Math.random() * h * 0.6;
+  } else {
+    startX = w * 0.2 + Math.random() * w * 0.6;
+    startY = h + 10;
+    endX = w * 0.2 + Math.random() * w * 0.6;
+    endY = -10;
+  }
 
   const prismCount = getUpgradeCount('prism');
   const baseDuration = 6;
@@ -39,10 +56,20 @@ function spawnPrismRay() {
   const totalDuration = baseDuration + bonusDuration;
 
   prismRays.push({
-    startX, startY, endX, endY,
-    life: 1.0, decay: 1 / (totalDuration * 60),
-    active: false, holdTime: 0, dispersePhase: 0, lumensGenerated: 0,
-    fadeOutSpeed: 0, colorAngles: null, lastHoldX: 0, lastHoldY: 0,
+    startX,
+    startY,
+    endX,
+    endY,
+    life: 1.0,
+    decay: 1 / (totalDuration * 60),
+    active: false,
+    holdTime: 0,
+    dispersePhase: 0,
+    lumensGenerated: 0,
+    fadeOutSpeed: 0,
+    colorAngles: null,
+    lastHoldX: 0,
+    lastHoldY: 0,
   });
 }
 
@@ -84,7 +111,9 @@ export function updatePrismRays(checkMilestones, updateUI) {
 
         if (!ray.colorAngles) {
           ray.colorAngles = [];
-          for (let c = 0; c < 7; c++) { ray.colorAngles.push(Math.random() * Math.PI * 2); }
+          for (let c = 0; c < 7; c++) {
+            ray.colorAngles.push(Math.random() * Math.PI * 2);
+          }
           ray.lastHoldX = prismHoldX;
           ray.lastHoldY = prismHoldY;
         }
@@ -95,7 +124,7 @@ export function updatePrismRays(checkMilestones, updateUI) {
         if (moveDist > 1) {
           const shift = moveDist * 0.03;
           for (let c = 0; c < ray.colorAngles.length; c++) {
-            ray.colorAngles[c] += shift * ((c % 2 === 0) ? 1 : -1) * (0.5 + c * 0.1);
+            ray.colorAngles[c] += shift * (c % 2 === 0 ? 1 : -1) * (0.5 + c * 0.1);
           }
           ray.lastHoldX = prismHoldX;
           ray.lastHoldY = prismHoldY;
@@ -115,7 +144,9 @@ export function updatePrismRays(checkMilestones, updateUI) {
     }
 
     ray.life -= ray.decay;
-    if (ray.life < 0.2) { ray.life -= ray.decay * 2; }
+    if (ray.life < 0.2) {
+      ray.life -= ray.decay * 2;
+    }
     if (ray.life <= 0) {
       prismRays[i] = prismRays[prismRays.length - 1];
       prismRays.pop();
@@ -146,7 +177,7 @@ export function drawPrismRays() {
       ctx.beginPath();
       ctx.moveTo(ray.startX, ray.startY);
       ctx.lineTo(ray.endX, ray.endY);
-      ctx.strokeStyle = 'rgba(40, 0, 60, ' + (alpha * 0.2) + ')';
+      ctx.strokeStyle = 'rgba(40, 0, 60, ' + alpha * 0.2 + ')';
       ctx.lineWidth = baseWidth * 8;
       ctx.stroke();
 
@@ -158,9 +189,9 @@ export function drawPrismRays() {
         const totalIntensity = Math.min(holdIntensity * prismIntensity, 4);
         const vortexSize = 50 + totalIntensity * 40;
         const vortexGlow = ctx.createRadialGradient(result.cx, result.cy, 0, result.cx, result.cy, vortexSize);
-        vortexGlow.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * Math.min(0.8 + totalIntensity * 0.1, 1.0)) + ')');
-        vortexGlow.addColorStop(0.3, 'rgba(20, 0, 30, ' + (alpha * Math.min(0.4 + totalIntensity * 0.1, 0.7)) + ')');
-        vortexGlow.addColorStop(0.7, 'rgba(40, 0, 60, ' + (alpha * 0.15) + ')');
+        vortexGlow.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * Math.min(0.8 + totalIntensity * 0.1, 1.0) + ')');
+        vortexGlow.addColorStop(0.3, 'rgba(20, 0, 30, ' + alpha * Math.min(0.4 + totalIntensity * 0.1, 0.7) + ')');
+        vortexGlow.addColorStop(0.7, 'rgba(40, 0, 60, ' + alpha * 0.15 + ')');
         vortexGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.beginPath();
         ctx.arc(result.cx, result.cy, vortexSize, 0, Math.PI * 2);
@@ -180,10 +211,11 @@ export function drawPrismRays() {
             const spiralA = baseAngle + t * Math.PI * 2;
             const sx = Math.cos(spiralA) * spiralR;
             const sy = Math.sin(spiralA) * spiralR;
-            if (t === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+            if (t === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
           }
           const armAlpha = Math.min(ray.holdTime / 30, 1) * alpha;
-          ctx.strokeStyle = 'rgba(0, 0, 0, ' + (armAlpha * 0.5) + ')';
+          ctx.strokeStyle = 'rgba(0, 0, 0, ' + armAlpha * 0.5 + ')';
           ctx.lineWidth = 1.5 + totalIntensity * 0.5;
           ctx.stroke();
         }
@@ -193,7 +225,16 @@ export function drawPrismRays() {
           const lumensThisBurst = ray.lumensGenerated;
           if (lumensThisBurst > 0) {
             const burstIntensity = Math.min(lumensThisBurst / 50, 1.5) + 0.3;
-            halos.push({ type: 'void-collapse', x: result.cx + (Math.random() - 0.5) * 20, y: result.cy + (Math.random() - 0.5) * 20, maxRadius: 40 * burstIntensity, opacity: 0.4 * burstIntensity, life: 1.0, decay: 0.03, delay: 0 });
+            halos.push({
+              type: 'void-collapse',
+              x: result.cx + (Math.random() - 0.5) * 20,
+              y: result.cy + (Math.random() - 0.5) * 20,
+              maxRadius: 40 * burstIntensity,
+              opacity: 0.4 * burstIntensity,
+              life: 1.0,
+              decay: 0.03,
+              delay: 0,
+            });
             ray.lumensGenerated = 0;
           }
         }
@@ -204,7 +245,7 @@ export function drawPrismRays() {
         ctx.beginPath();
         ctx.moveTo(ray.startX, ray.startY);
         ctx.lineTo(ray.endX, ray.endY);
-        ctx.strokeStyle = 'rgba(0, 0, 0, ' + ((1 - fadeAlpha) * 0.2) + ')';
+        ctx.strokeStyle = 'rgba(0, 0, 0, ' + (1 - fadeAlpha) * 0.2 + ')';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 10]);
         ctx.stroke();
@@ -257,19 +298,19 @@ export function drawPrismRays() {
           ctx.beginPath();
           ctx.moveTo(result.cx, result.cy);
           ctx.lineTo(endRX, endRY);
-          ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.7) + ')';
+          ctx.strokeStyle = RAINBOW[c] + intensifiedAlpha * 0.7 + ')';
           ctx.lineWidth = rayWidth;
           ctx.stroke();
           const glowR = 10 + totalIntensity * 8;
           ctx.beginPath();
           ctx.arc(endRX, endRY, glowR, 0, Math.PI * 2);
-          ctx.fillStyle = RAINBOW[c] + (intensifiedAlpha * 0.4) + ')';
+          ctx.fillStyle = RAINBOW[c] + intensifiedAlpha * 0.4 + ')';
           ctx.fill();
           if (totalIntensity > 1.5) {
             ctx.beginPath();
             ctx.moveTo(result.cx, result.cy);
             ctx.lineTo(endRX, endRY);
-            ctx.strokeStyle = RAINBOW[c] + (intensifiedAlpha * 0.15) + ')';
+            ctx.strokeStyle = RAINBOW[c] + intensifiedAlpha * 0.15 + ')';
             ctx.lineWidth = rayWidth * 4;
             ctx.stroke();
           }
@@ -279,7 +320,16 @@ export function drawPrismRays() {
           const lumensThisBurst = ray.lumensGenerated;
           if (lumensThisBurst > 0) {
             const burstIntensity = Math.min(lumensThisBurst / 50, 1.5) + 0.3;
-            halos.push({ type: 'glow', x: result.cx + (Math.random() - 0.5) * 20, y: result.cy + (Math.random() - 0.5) * 20, maxRadius: 30 * burstIntensity, opacity: 0.5 * burstIntensity, life: 1.0, decay: 0.03, delay: 0 });
+            halos.push({
+              type: 'glow',
+              x: result.cx + (Math.random() - 0.5) * 20,
+              y: result.cy + (Math.random() - 0.5) * 20,
+              maxRadius: 30 * burstIntensity,
+              opacity: 0.5 * burstIntensity,
+              life: 1.0,
+              decay: 0.03,
+              delay: 0,
+            });
             ray.lumensGenerated = 0;
           }
         }

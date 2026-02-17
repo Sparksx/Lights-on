@@ -48,7 +48,7 @@ export function drawStars() {
       ctx.fill();
       if (s.size > 1) {
         const aura = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 2.5);
-        aura.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.2) + ')');
+        aura.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * 0.2 + ')');
         aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size * 2.5, 0, Math.PI * 2);

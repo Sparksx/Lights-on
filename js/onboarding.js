@@ -6,9 +6,9 @@ import { _st } from './utils.js';
 import { mp } from './multiplayer.js';
 
 // --- Constants ---
-var ONBOARDING_THRESHOLD = 60000;    // totalLumens needed to trigger
+var ONBOARDING_THRESHOLD = 60000; // totalLumens needed to trigger
 var ONBOARDING_KEY = 'light-mp-onboarding'; // localStorage flag
-var SKIP_DELAY = 3000;               // ms before skip button appears
+var SKIP_DELAY = 3000; // ms before skip button appears
 
 // --- State ---
 var onboardingShown = false;
@@ -19,12 +19,12 @@ var serverAvailable = false;
 var overlay, orb, text1, text2, actions, skipBtn;
 
 function grabDOM() {
-  overlay  = document.getElementById('mp-onboarding');
-  orb      = document.getElementById('mp-onboarding-orb');
-  text1    = document.getElementById('mp-onboarding-text1');
-  text2    = document.getElementById('mp-onboarding-text2');
-  actions  = document.getElementById('mp-onboarding-actions');
-  skipBtn  = document.getElementById('mp-onboarding-skip');
+  overlay = document.getElementById('mp-onboarding');
+  orb = document.getElementById('mp-onboarding-orb');
+  text1 = document.getElementById('mp-onboarding-text1');
+  text2 = document.getElementById('mp-onboarding-text2');
+  actions = document.getElementById('mp-onboarding-actions');
+  skipBtn = document.getElementById('mp-onboarding-skip');
 }
 
 // --- Public: mark server as reachable ---
@@ -41,25 +41,34 @@ export function isOnboardingDone() {
   try {
     var val = localStorage.getItem(ONBOARDING_KEY);
     return val === 'connected' || val === 'solo';
-  } catch (_) { return false; }
+  } catch (_) {
+    return false;
+  }
 }
 
 // --- Public: did user choose to connect (vs solo)? ---
 export function isMultiplayerActive() {
   try {
     return localStorage.getItem(ONBOARDING_KEY) === 'connected';
-  } catch (_) { return false; }
+  } catch (_) {
+    return false;
+  }
 }
 
 function markOnboardingDone(choice) {
-  try { localStorage.setItem(ONBOARDING_KEY, choice); } catch (_) {}
+  try {
+    localStorage.setItem(ONBOARDING_KEY, choice);
+  } catch (_) {}
   onboardingDismissed = true;
 }
 
 // --- Public: check if onboarding should trigger ---
 export function checkOnboarding() {
   if (onboardingShown || onboardingDismissed) return;
-  if (isOnboardingDone()) { onboardingDismissed = true; return; }
+  if (isOnboardingDone()) {
+    onboardingDismissed = true;
+    return;
+  }
   if (!serverAvailable) return;
   if (state.totalLumens < ONBOARDING_THRESHOLD) return;
 
@@ -83,9 +92,9 @@ function showOnboarding() {
   }
 
   // Wire up buttons
-  var googleBtn  = document.getElementById('mp-onboarding-google');
+  var googleBtn = document.getElementById('mp-onboarding-google');
   var discordBtn = document.getElementById('mp-onboarding-discord');
-  var soloBtn    = document.getElementById('mp-onboarding-solo');
+  var soloBtn = document.getElementById('mp-onboarding-solo');
 
   googleBtn.addEventListener('click', function (e) {
     e.stopPropagation();

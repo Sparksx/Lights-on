@@ -5,16 +5,16 @@ import { gameMode } from './state.js';
 
 // --- Multiplayer state ---
 export const mp = {
-  user: null,           // { id, displayName, avatar } or null
+  user: null, // { id, displayName, avatar } or null
   connected: false,
   socket: null,
   cosmicWar: { totalLight: 0, totalDark: 0 },
   online: { total: 0, light: 0, dark: 0 },
-  pendingLumens: 0,     // Lumens earned since last report
+  pendingLumens: 0, // Lumens earned since last report
 
   // --- Team production ---
-  contributionRate: 25,    // % of lumens contributed (10, 25, 50, 100)
-  profile: null,           // { grade, contribution, side, season, streakDays, streakMultiplier, contributionRate, mpPrestigeBonus }
+  contributionRate: 25, // % of lumens contributed (10, 25, 50, 100)
+  profile: null, // { grade, contribution, side, season, streakDays, streakMultiplier, contributionRate, mpPrestigeBonus }
 
   // --- Season ---
   seasonInfo: {
@@ -23,22 +23,30 @@ export const mp = {
     isLastDay: false,
     endsAt: null,
   },
-  pendingRewards: [],      // Unclaimed season rewards
-  seasonEndData: null,     // Set when a season-end event fires live
+  pendingRewards: [], // Unclaimed season rewards
+  seasonEndData: null, // Set when a season-end event fires live
 };
 
 // --- Callbacks for UI updates ---
 const listeners = [];
-export function onMultiplayerUpdate(fn) { listeners.push(fn); }
-function notify() { listeners.forEach(fn => fn(mp)); }
+export function onMultiplayerUpdate(fn) {
+  listeners.push(fn);
+}
+function notify() {
+  listeners.forEach((fn) => fn(mp));
+}
 
 // --- Season end callbacks ---
 const seasonEndListeners = [];
-export function onSeasonEnd(fn) { seasonEndListeners.push(fn); }
+export function onSeasonEnd(fn) {
+  seasonEndListeners.push(fn);
+}
 
 // --- Reward callbacks ---
 const rewardListeners = [];
-export function onRewardReceived(fn) { rewardListeners.push(fn); }
+export function onRewardReceived(fn) {
+  rewardListeners.push(fn);
+}
 
 // --- Auth ---
 export async function fetchUser() {
@@ -96,7 +104,7 @@ export async function fetchRewards() {
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
       mp.pendingRewards = data;
-      rewardListeners.forEach(fn => fn(data));
+      rewardListeners.forEach((fn) => fn(data));
     }
   } catch (_) {}
 }
@@ -159,20 +167,20 @@ export function connectSocket() {
   socket.on('season-rewards', (data) => {
     if (Array.isArray(data) && data.length > 0) {
       mp.pendingRewards = data;
-      rewardListeners.forEach(fn => fn(data));
+      rewardListeners.forEach((fn) => fn(data));
     }
   });
 
   // Server broadcasts season end
   socket.on('season-end', (data) => {
     mp.seasonEndData = data;
-    seasonEndListeners.forEach(fn => fn(data));
+    seasonEndListeners.forEach((fn) => fn(data));
   });
 
   // Server confirms a reward was claimed
   socket.on('reward-claimed', (data) => {
     // Remove from pending
-    mp.pendingRewards = mp.pendingRewards.filter(r => r.id !== data.id);
+    mp.pendingRewards = mp.pendingRewards.filter((r) => r.id !== data.id);
     notify();
   });
 }

@@ -1,11 +1,14 @@
 /* === RESET & BASE === */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   height: 100dvh;
@@ -178,10 +181,21 @@ html, body {
 }
 
 @keyframes toggle-appear {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.8); opacity: 1; }
-  80% { transform: scale(0.9); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.8);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 #upgrade-toggle::after {
@@ -213,14 +227,31 @@ html, body {
 }
 
 @keyframes absorb-ring {
-  0% { width: 28px; height: 28px; opacity: 0; }
-  20% { opacity: 0.4; }
-  100% { width: 8px; height: 8px; opacity: 0; }
+  0% {
+    width: 28px;
+    height: 28px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  100% {
+    width: 8px;
+    height: 8px;
+    opacity: 0;
+  }
 }
 
 @keyframes breathe {
-  0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
 }
 
 /* Notification badge (new upgrade available) */
@@ -229,8 +260,15 @@ html, body {
 }
 
 @keyframes breathe-notify {
-  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.6); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.6);
+  }
 }
 
 /* === UPGRADE PANEL === */
@@ -286,7 +324,9 @@ html, body {
   padding: 14px;
   margin-bottom: 10px;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
   position: relative;
 }
 
@@ -306,8 +346,13 @@ html, body {
 }
 
 @keyframes pulse {
-  0%, 100% { border-color: rgba(255, 255, 255, 0.4); }
-  50% { border-color: rgba(255, 255, 255, 1); }
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 1);
+  }
 }
 
 .upgrade-item.maxed {
@@ -363,7 +408,9 @@ html, body {
   font-size: 0.65rem;
   cursor: pointer;
   letter-spacing: 1px;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 
 #reset-btn:hover {
@@ -391,7 +438,9 @@ html, body {
   border: 1px solid rgba(255, 200, 0, 0.3);
   border-radius: 8px;
   position: relative;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 
 #admin-slider::after {
@@ -403,7 +452,9 @@ html, body {
   height: 10px;
   background: rgba(255, 200, 0, 0.4);
   border-radius: 50%;
-  transition: transform 0.2s, background 0.2s;
+  transition:
+    transform 0.2s,
+    background 0.2s;
 }
 
 #admin-checkbox:checked + #admin-slider {
@@ -464,7 +515,9 @@ html, body {
   font-size: 1rem;
   cursor: pointer;
   letter-spacing: 2px;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 #restart-btn:hover {
@@ -488,8 +541,12 @@ html, body {
 }
 
 @keyframes switchFadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 #switch-hint {
@@ -502,8 +559,14 @@ html, body {
 }
 
 @keyframes hintAppear {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 0.6; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
 }
 
 #light-switch {
@@ -513,8 +576,14 @@ html, body {
 }
 
 @keyframes switchAppear {
-  0% { opacity: 0; transform: scale(0.8); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 #switch-plate {
@@ -582,19 +651,47 @@ html, body {
   height: 24px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.6),
-              0 0 80px 30px rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 0 40px 15px rgba(255, 255, 255, 0.6),
+    0 0 80px 30px rgba(255, 255, 255, 0.3);
   animation: intro-orb-die 4s ease-in forwards;
   margin-bottom: 40px;
 }
 
 @keyframes intro-orb-die {
-  0%   { opacity: 1; transform: scale(1); box-shadow: 0 0 40px 15px rgba(255,255,255,0.6), 0 0 80px 30px rgba(255,255,255,0.3); }
-  30%  { opacity: 0.7; transform: scale(0.9); }
-  50%  { opacity: 0.9; transform: scale(0.95); }
-  70%  { opacity: 0.4; transform: scale(0.7); box-shadow: 0 0 20px 8px rgba(255,255,255,0.3), 0 0 40px 15px rgba(255,255,255,0.1); }
-  85%  { opacity: 0.6; transform: scale(0.75); }
-  100% { opacity: 0.15; transform: scale(0.4); box-shadow: 0 0 8px 3px rgba(255,255,255,0.1), 0 0 16px 6px rgba(255,255,255,0.05); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 40px 15px rgba(255, 255, 255, 0.6),
+      0 0 80px 30px rgba(255, 255, 255, 0.3);
+  }
+  30% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(0.95);
+  }
+  70% {
+    opacity: 0.4;
+    transform: scale(0.7);
+    box-shadow:
+      0 0 20px 8px rgba(255, 255, 255, 0.3),
+      0 0 40px 15px rgba(255, 255, 255, 0.1);
+  }
+  85% {
+    opacity: 0.6;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 0.15;
+    transform: scale(0.4);
+    box-shadow:
+      0 0 8px 3px rgba(255, 255, 255, 0.1),
+      0 0 16px 6px rgba(255, 255, 255, 0.05);
+  }
 }
 
 #intro-text {
@@ -606,8 +703,14 @@ html, body {
 }
 
 @keyframes intro-text-appear {
-  0%   { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 0.6; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
 }
 
 #intro-plea {
@@ -619,8 +722,12 @@ html, body {
 }
 
 @keyframes intro-plea-appear {
-  0%   { opacity: 0; }
-  100% { opacity: 0.4; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.4;
+  }
 }
 
 /* OFF mode intro: inverted colors */
@@ -630,18 +737,46 @@ body.mode-off #intro-overlay {
 
 body.mode-off #intro-orb {
   background: #000;
-  box-shadow: 0 0 40px 15px rgba(0, 0, 0, 0.4),
-              0 0 80px 30px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 40px 15px rgba(0, 0, 0, 0.4),
+    0 0 80px 30px rgba(0, 0, 0, 0.2);
   animation: intro-orb-die-off 4s ease-in forwards;
 }
 
 @keyframes intro-orb-die-off {
-  0%   { opacity: 1; transform: scale(1); box-shadow: 0 0 40px 15px rgba(0,0,0,0.4), 0 0 80px 30px rgba(0,0,0,0.2); }
-  30%  { opacity: 0.7; transform: scale(0.9); }
-  50%  { opacity: 0.9; transform: scale(0.95); }
-  70%  { opacity: 0.4; transform: scale(0.7); box-shadow: 0 0 20px 8px rgba(0,0,0,0.2), 0 0 40px 15px rgba(0,0,0,0.1); }
-  85%  { opacity: 0.6; transform: scale(0.75); }
-  100% { opacity: 0.15; transform: scale(0.4); box-shadow: 0 0 8px 3px rgba(0,0,0,0.1), 0 0 16px 6px rgba(0,0,0,0.05); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 40px 15px rgba(0, 0, 0, 0.4),
+      0 0 80px 30px rgba(0, 0, 0, 0.2);
+  }
+  30% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(0.95);
+  }
+  70% {
+    opacity: 0.4;
+    transform: scale(0.7);
+    box-shadow:
+      0 0 20px 8px rgba(0, 0, 0, 0.2),
+      0 0 40px 15px rgba(0, 0, 0, 0.1);
+  }
+  85% {
+    opacity: 0.6;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 0.15;
+    transform: scale(0.4);
+    box-shadow:
+      0 0 8px 3px rgba(0, 0, 0, 0.1),
+      0 0 16px 6px rgba(0, 0, 0, 0.05);
+  }
 }
 
 body.mode-off #intro-text,
@@ -734,8 +869,13 @@ body.mode-off .upgrade-item.affordable:not(.maxed) {
 }
 
 @keyframes pulse-off {
-  0%, 100% { border-color: rgba(0, 0, 0, 0.4); }
-  50% { border-color: rgba(0, 0, 0, 1); }
+  0%,
+  100% {
+    border-color: rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    border-color: rgba(0, 0, 0, 1);
+  }
 }
 
 body.mode-off #reset-btn {
@@ -833,7 +973,9 @@ body.mode-off #restart-btn:hover {
   font-size: 1rem;
   cursor: pointer;
   letter-spacing: 2px;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   margin-bottom: 12px;
 }
 
@@ -883,8 +1025,12 @@ body.mode-off #prestige-btn:hover {
 }
 
 @keyframes offlineFadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 body.mode-off #offline-popup {
@@ -923,13 +1069,7 @@ body.mode-off #reset-btn.confirming {
   height: 28px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.4);
-  background: conic-gradient(
-    from 270deg,
-    #fff 0%,
-    #fff 50%,
-    #000 50%,
-    #000 100%
-  );
+  background: conic-gradient(from 270deg, #fff 0%, #fff 50%, #000 50%, #000 100%);
   transition: border-color 0.3s;
   animation: balance-breathe 4s ease-in-out infinite;
 }
@@ -956,20 +1096,21 @@ body.mode-off #reset-btn.confirming {
 }
 
 @keyframes balance-breathe {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
 }
 
 /* --- Mode OFF overrides --- */
 body.mode-off #mp-balance-circle {
   border-color: rgba(0, 0, 0, 0.4);
-  background: conic-gradient(
-    from 270deg,
-    #000 0%,
-    #000 50%,
-    #fff 50%,
-    #fff 100%
-  );
+  background: conic-gradient(from 270deg, #000 0%, #000 50%, #fff 50%, #fff 100%);
 }
 
 body.mode-off #mp-balance:hover #mp-balance-circle {
@@ -1016,8 +1157,14 @@ body.mode-off #mp-overlay-backdrop {
 }
 
 @keyframes overlaySlideIn {
-  0% { opacity: 0; transform: translateY(-12px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 #mp-overlay-close {
@@ -1086,7 +1233,9 @@ body.mode-off #mp-overlay-name {
   font-size: 0.6rem;
   cursor: pointer;
   letter-spacing: 1px;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 
 #mp-overlay-logout:hover {
@@ -1201,21 +1350,30 @@ body.mode-off #mp-onboarding {
   height: 16px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0.5),
-              0 0 60px 20px rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 30px 10px rgba(255, 255, 255, 0.5),
+    0 0 60px 20px rgba(255, 255, 255, 0.2);
   margin-bottom: 40px;
   animation: onboarding-orb-pulse 3s ease-in-out infinite;
 }
 
 body.mode-off #mp-onboarding-orb {
   background: #000;
-  box-shadow: 0 0 30px 10px rgba(0, 0, 0, 0.3),
-              0 0 60px 20px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 30px 10px rgba(0, 0, 0, 0.3),
+    0 0 60px 20px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes onboarding-orb-pulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
 }
 
 #mp-onboarding-text1 {
@@ -1233,8 +1391,14 @@ body.mode-off #mp-onboarding-text1 {
 }
 
 @keyframes onboarding-text1-in {
-  0%   { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 0.7; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 0.7;
+    transform: translateY(0);
+  }
 }
 
 #mp-onboarding-text2 {
@@ -1252,8 +1416,12 @@ body.mode-off #mp-onboarding-text2 {
 }
 
 @keyframes onboarding-text2-in {
-  0%   { opacity: 0; }
-  100% { opacity: 0.5; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.5;
+  }
 }
 
 /* Action buttons */
@@ -1267,8 +1435,14 @@ body.mode-off #mp-onboarding-text2 {
 }
 
 @keyframes onboarding-actions-in {
-  0%   { opacity: 0; transform: translateY(8px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .mp-onboarding-btn {
@@ -1280,7 +1454,10 @@ body.mode-off #mp-onboarding-text2 {
   font-size: 0.8rem;
   cursor: pointer;
   letter-spacing: 2px;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
   min-width: 200px;
   text-align: center;
 }
@@ -1367,8 +1544,13 @@ body.mode-off #mp-overlay-season {
 }
 
 @keyframes pulse-alert {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Grade badge */
@@ -1459,7 +1641,10 @@ body.mode-off #mp-overlay-rate-label {
   font-size: 0.6rem;
   cursor: pointer;
   letter-spacing: 1px;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
   border-radius: 2px;
 }
 
@@ -1512,7 +1697,9 @@ body.mode-off #mp-overlay-rate-desc {
   cursor: pointer;
   letter-spacing: 2px;
   text-transform: uppercase;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 
 #mp-overlay-leaderboard-btn:hover {
@@ -1618,7 +1805,9 @@ body.mode-off #mp-leaderboard-title {
   font-size: 0.65rem;
   cursor: pointer;
   letter-spacing: 1px;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
   border-radius: 2px;
 }
 
@@ -1743,16 +1932,18 @@ body.mode-off #season-end-backdrop {
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.5),
-              0 0 80px 30px rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 40px 15px rgba(255, 255, 255, 0.5),
+    0 0 80px 30px rgba(255, 255, 255, 0.2);
   animation: onboarding-orb-pulse 3s ease-in-out infinite;
   margin-bottom: 12px;
 }
 
 body.mode-off #season-end-orb {
   background: #000;
-  box-shadow: 0 0 40px 15px rgba(0, 0, 0, 0.3),
-              0 0 80px 30px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 40px 15px rgba(0, 0, 0, 0.3),
+    0 0 80px 30px rgba(0, 0, 0, 0.15);
 }
 
 #season-end-title {
@@ -1853,7 +2044,9 @@ body.mode-off #season-end-reward-bonus {
   font-size: 0.8rem;
   cursor: pointer;
   letter-spacing: 2px;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
   margin-top: 8px;
   opacity: 0;
   animation: onboarding-actions-in 0.6s ease 3s forwards;

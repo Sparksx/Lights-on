@@ -22,7 +22,8 @@ function spawnLightBurst() {
   const speed = 0.08 + Math.random() * 0.12;
 
   lightBursts.push({
-    x, y,
+    x,
+    y,
     radius: 20,
     bonus: bonus,
     life: 1.0,
@@ -87,10 +88,22 @@ export function updateLightBursts() {
     b.x += b.vx;
     b.y += b.vy;
 
-    if (b.x < margin) { b.wanderAngle = 0; b.x = margin; }
-    if (b.x > canvas.width - margin) { b.wanderAngle = Math.PI; b.x = canvas.width - margin; }
-    if (b.y < margin) { b.wanderAngle = Math.PI / 2; b.y = margin; }
-    if (b.y > canvas.height - margin) { b.wanderAngle = -Math.PI / 2; b.y = canvas.height - margin; }
+    if (b.x < margin) {
+      b.wanderAngle = 0;
+      b.x = margin;
+    }
+    if (b.x > canvas.width - margin) {
+      b.wanderAngle = Math.PI;
+      b.x = canvas.width - margin;
+    }
+    if (b.y < margin) {
+      b.wanderAngle = Math.PI / 2;
+      b.y = margin;
+    }
+    if (b.y > canvas.height - margin) {
+      b.wanderAngle = -Math.PI / 2;
+      b.y = canvas.height - margin;
+    }
 
     if (b.twinkleActive > 0) {
       b.twinkleActive--;
@@ -120,9 +133,9 @@ export function drawLightBursts() {
 
     if (gameMode === 'off') {
       const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 3);
-      gradient.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.5) + ')');
-      gradient.addColorStop(0.3, 'rgba(20, 0, 35, ' + (alpha * 0.25) + ')');
-      gradient.addColorStop(0.6, 'rgba(40, 0, 50, ' + (alpha * 0.08) + ')');
+      gradient.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * 0.5 + ')');
+      gradient.addColorStop(0.3, 'rgba(20, 0, 35, ' + alpha * 0.25 + ')');
+      gradient.addColorStop(0.6, 'rgba(40, 0, 50, ' + alpha * 0.08 + ')');
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.beginPath();
       ctx.arc(b.x, b.y, r * 3, 0, Math.PI * 2);
@@ -130,8 +143,8 @@ export function drawLightBursts() {
       ctx.fill();
 
       const core = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 0.8);
-      core.addColorStop(0, 'rgba(0, 0, 0, ' + (alpha * 0.85) + ')');
-      core.addColorStop(0.6, 'rgba(15, 0, 25, ' + (alpha * 0.5) + ')');
+      core.addColorStop(0, 'rgba(0, 0, 0, ' + alpha * 0.85 + ')');
+      core.addColorStop(0.6, 'rgba(15, 0, 25, ' + alpha * 0.5 + ')');
       core.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.beginPath();
       ctx.arc(b.x, b.y, r * 0.8, 0, Math.PI * 2);
@@ -141,7 +154,7 @@ export function drawLightBursts() {
       if (twinkleIntensity > 0.1) {
         const flashR = r * 1.5 * twinkleIntensity;
         const flash = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, flashR);
-        flash.addColorStop(0, 'rgba(60, 0, 80, ' + (twinkleIntensity * alpha * 0.6) + ')');
+        flash.addColorStop(0, 'rgba(60, 0, 80, ' + twinkleIntensity * alpha * 0.6 + ')');
         flash.addColorStop(1, 'rgba(30, 0, 50, 0)');
         ctx.beginPath();
         ctx.arc(b.x, b.y, flashR, 0, Math.PI * 2);
@@ -183,24 +196,87 @@ export function clickLightBurst(x, y, checkMilestones, updateUI) {
       const explosionIntensity = Math.min(0.6 + explosionScale * 0.15, 1.0);
 
       if (gameMode === 'off') {
-        halos.push({ type: 'void-implode', x: b.x, y: b.y, maxRadius: 80 * explosionScale, opacity: explosionIntensity * 0.8, life: 1.0, decay: 0.018, delay: 0 });
-        halos.push({ type: 'void-stain', x: b.x, y: b.y, maxRadius: 50 * explosionScale, opacity: explosionIntensity * 0.4, life: 1.0, decay: 0.005, delay: 0 });
+        halos.push({
+          type: 'void-implode',
+          x: b.x,
+          y: b.y,
+          maxRadius: 80 * explosionScale,
+          opacity: explosionIntensity * 0.8,
+          life: 1.0,
+          decay: 0.018,
+          delay: 0,
+        });
+        halos.push({
+          type: 'void-stain',
+          x: b.x,
+          y: b.y,
+          maxRadius: 50 * explosionScale,
+          opacity: explosionIntensity * 0.4,
+          life: 1.0,
+          decay: 0.005,
+          delay: 0,
+        });
         const ringCount = Math.min(2 + Math.floor(explosionScale), 5);
         for (let r = 0; r < ringCount; r++) {
-          halos.push({ type: 'void-ring', x: b.x, y: b.y, maxRadius: (70 + r * 40) * explosionScale, opacity: explosionIntensity * (0.6 - r * 0.1), life: 1.0, decay: 0.012 + r * 0.003, delay: r * 3 });
+          halos.push({
+            type: 'void-ring',
+            x: b.x,
+            y: b.y,
+            maxRadius: (70 + r * 40) * explosionScale,
+            opacity: explosionIntensity * (0.6 - r * 0.1),
+            life: 1.0,
+            decay: 0.012 + r * 0.003,
+            delay: r * 3,
+          });
         }
       } else {
-        halos.push({ type: 'glow', x: b.x, y: b.y, maxRadius: 60 * explosionScale, opacity: explosionIntensity, life: 1.0, decay: 0.015, delay: 0 });
-        halos.push({ type: 'persist', x: b.x, y: b.y, maxRadius: 80 * explosionScale, opacity: explosionIntensity * 0.5, life: 1.0, decay: 0.006, delay: 0 });
+        halos.push({
+          type: 'glow',
+          x: b.x,
+          y: b.y,
+          maxRadius: 60 * explosionScale,
+          opacity: explosionIntensity,
+          life: 1.0,
+          decay: 0.015,
+          delay: 0,
+        });
+        halos.push({
+          type: 'persist',
+          x: b.x,
+          y: b.y,
+          maxRadius: 80 * explosionScale,
+          opacity: explosionIntensity * 0.5,
+          life: 1.0,
+          decay: 0.006,
+          delay: 0,
+        });
         const ringCount = Math.min(2 + Math.floor(explosionScale), 6);
         for (let r = 0; r < ringCount; r++) {
-          halos.push({ type: 'ring', x: b.x, y: b.y, maxRadius: (60 + r * 35) * explosionScale, opacity: explosionIntensity * (1 - r * 0.12), life: 1.0, decay: 0.01 + r * 0.003, delay: r * 4 });
+          halos.push({
+            type: 'ring',
+            x: b.x,
+            y: b.y,
+            maxRadius: (60 + r * 35) * explosionScale,
+            opacity: explosionIntensity * (1 - r * 0.12),
+            life: 1.0,
+            decay: 0.01 + r * 0.003,
+            delay: r * 4,
+          });
         }
         const particleCount = Math.min(4 + Math.floor(explosionScale * 2), 14);
         for (let p = 0; p < particleCount; p++) {
           const angle = (p / particleCount) * Math.PI * 2 + Math.random() * 0.3;
           const pdist = 30 + Math.random() * 50 * explosionScale;
-          halos.push({ type: 'glow', x: b.x + Math.cos(angle) * pdist, y: b.y + Math.sin(angle) * pdist, maxRadius: 15 + Math.random() * 20 * explosionScale, opacity: explosionIntensity * (0.4 + Math.random() * 0.3), life: 1.0, decay: 0.02 + Math.random() * 0.015, delay: 2 + Math.floor(Math.random() * 6) });
+          halos.push({
+            type: 'glow',
+            x: b.x + Math.cos(angle) * pdist,
+            y: b.y + Math.sin(angle) * pdist,
+            maxRadius: 15 + Math.random() * 20 * explosionScale,
+            opacity: explosionIntensity * (0.4 + Math.random() * 0.3),
+            life: 1.0,
+            decay: 0.02 + Math.random() * 0.015,
+            delay: 2 + Math.floor(Math.random() * 6),
+          });
         }
       }
 
