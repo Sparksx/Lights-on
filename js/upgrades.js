@@ -11,6 +11,7 @@ import { regenerateStars } from './effects/stars.js';
 import { save } from './save.js';
 import { showSwitch } from './victory.js';
 import { updateUI, updateToggleNotification } from './ui.js';
+import { checkOnboarding } from './onboarding.js';
 
 // --- Milestones ---
 let upgradeUnlocked = false;
@@ -160,6 +161,7 @@ export function checkMilestones() {
     }
   }
   updateToggleNotification();
+  checkOnboarding();
 }
 
 export function updateMilestone() {

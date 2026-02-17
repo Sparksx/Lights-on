@@ -31,30 +31,48 @@
     <div id="mode-title">LIGHT</div>
   </div>
 
-  <!-- MULTIPLAYER UI -->
-  <div id="mp-bar" class="hidden">
-    <div id="mp-user">
-      <div id="mp-login-btns">
-        <button id="mp-google-btn" class="mp-login" onclick="location.href='/auth/google'">Google</button>
-        <button id="mp-discord-btn" class="mp-login" onclick="location.href='/auth/discord'">Discord</button>
+  <!-- MULTIPLAYER BALANCE INDICATOR (top-left, hidden until onboarding done) -->
+  <div id="mp-balance" class="hidden">
+    <div id="mp-balance-circle"></div>
+    <div id="mp-balance-pip"></div>
+  </div>
+
+  <!-- MULTIPLAYER OVERLAY (opened by clicking balance indicator) -->
+  <div id="mp-overlay" class="hidden">
+    <div id="mp-overlay-backdrop"></div>
+    <div id="mp-overlay-content">
+      <button id="mp-overlay-close">&times;</button>
+      <div id="mp-overlay-title">L'Équilibre Cosmique</div>
+      <div id="mp-overlay-user">
+        <img id="mp-overlay-avatar" src="" alt="">
+        <span id="mp-overlay-name"></span>
+        <button id="mp-overlay-logout">Déconnexion</button>
       </div>
-      <div id="mp-profile" class="hidden">
-        <img id="mp-avatar" src="" alt="">
-        <span id="mp-name"></span>
-        <button id="mp-logout" class="mp-login">&#x2715;</button>
+      <div id="mp-overlay-war">
+        <div id="mp-overlay-gauge">
+          <div id="mp-overlay-light-bar"></div>
+          <div id="mp-overlay-dark-bar"></div>
+        </div>
+        <div id="mp-overlay-stats">
+          <span id="mp-overlay-light-total">0</span>
+          <span id="mp-overlay-online">0 en ligne</span>
+          <span id="mp-overlay-dark-total">0</span>
+        </div>
       </div>
     </div>
-    <div id="mp-cosmic">
-      <div id="cosmic-bar">
-        <div id="cosmic-light"></div>
-        <div id="cosmic-dark"></div>
-      </div>
-      <div id="cosmic-labels">
-        <span id="cosmic-light-count">0</span>
-        <span id="cosmic-online">0 online</span>
-        <span id="cosmic-dark-count">0</span>
-      </div>
+  </div>
+
+  <!-- MULTIPLAYER ONBOARDING CINEMATIC -->
+  <div id="mp-onboarding" class="hidden">
+    <div id="mp-onboarding-orb"></div>
+    <div id="mp-onboarding-text1"></div>
+    <div id="mp-onboarding-text2"></div>
+    <div id="mp-onboarding-actions" class="hidden">
+      <button id="mp-onboarding-google" class="mp-onboarding-btn">Google</button>
+      <button id="mp-onboarding-discord" class="mp-onboarding-btn">Discord</button>
+      <button id="mp-onboarding-solo" class="mp-onboarding-btn mp-solo-btn">Continuer seul</button>
     </div>
+    <button id="mp-onboarding-skip" class="hidden">Passer ›</button>
   </div>
 
   <div id="game-area" class="hidden">
