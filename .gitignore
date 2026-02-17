@@ -9,6 +9,7 @@ dist/
 tests/e2e/results/
 test-results/
 playwright-report/
+coverage/
 
 # IDE
 .vscode/
