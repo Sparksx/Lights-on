@@ -53,6 +53,15 @@ export function getSaveKey() {
   return gameMode === 'off' ? 'lights-off-save' : 'lights-on-save';
 }
 
+// --- Multiplayer prestige bonus (permanent, from season rewards) ---
+export let mpPrestigeBonus = 0;
+
+export function setMpPrestigeBonus(val) { mpPrestigeBonus = val; }
+
+export function getTotalPrestigeMultiplier() {
+  return prestigeMultiplier + mpPrestigeBonus;
+}
+
 // --- Shared mutable flags (cross-module) ---
 export const shared = {
   sunCinematicActive: false,

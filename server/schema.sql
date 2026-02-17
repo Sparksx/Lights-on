@@ -16,7 +16,12 @@ CREATE TABLE IF NOT EXISTS users (
   display_name VARCHAR(100) NOT NULL,
   avatar_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  last_seen_at TIMESTAMPTZ DEFAULT NOW()
+  last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Multiplayer progression
+  contribution_rate INT DEFAULT 25 CHECK (contribution_rate IN (10, 25, 50, 100)),
+  streak_days INT DEFAULT 0,
+  streak_last_date DATE,
+  mp_prestige_bonus NUMERIC(6,2) DEFAULT 0
 );
 
 -- Cosmic War — one row per active season
@@ -26,7 +31,9 @@ CREATE TABLE IF NOT EXISTS cosmic_war (
   total_light BIGINT DEFAULT 0,
   total_dark BIGINT DEFAULT 0,
   started_at TIMESTAMPTZ DEFAULT NOW(),
-  ended_at TIMESTAMPTZ
+  ended_at TIMESTAMPTZ,
+  duration_days INT DEFAULT 14,
+  winner VARCHAR(5) CHECK (winner IN ('light', 'dark', 'draw'))
 );
 
 -- Seed the first season
@@ -45,3 +52,33 @@ CREATE TABLE IF NOT EXISTS contributions (
 
 CREATE INDEX IF NOT EXISTS idx_contributions_user ON contributions(user_id);
 CREATE INDEX IF NOT EXISTS idx_contributions_season ON contributions(season);
+
+-- Season rewards — generated at season end for each qualifying player
+CREATE TABLE IF NOT EXISTS season_rewards (
+  id SERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  season INT NOT NULL,
+  side VARCHAR(3) NOT NULL CHECK (side IN ('on', 'off')),
+  contribution_total BIGINT DEFAULT 0,
+  rank_in_team INT,
+  grade VARCHAR(20) NOT NULL DEFAULT 'none',
+  won BOOLEAN DEFAULT FALSE,
+  top_percent BOOLEAN DEFAULT FALSE,
+  prestige_bonus NUMERIC(4,2) DEFAULT 0,
+  claimed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_season_rewards_user ON season_rewards(user_id);
+CREATE INDEX IF NOT EXISTS idx_season_rewards_season ON season_rewards(season);
+
+-- Migrations: add columns if they don't exist (safe for existing databases)
+DO $$ BEGIN
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS contribution_rate INT DEFAULT 25;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_days INT DEFAULT 0;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_last_date DATE;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_prestige_bonus NUMERIC(6,2) DEFAULT 0;
+  ALTER TABLE cosmic_war ADD COLUMN IF NOT EXISTS duration_days INT DEFAULT 14;
+  ALTER TABLE cosmic_war ADD COLUMN IF NOT EXISTS winner VARCHAR(5);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;

@@ -1,7 +1,7 @@
 // === Click — Click handler and input event listeners ===
 'use strict';
 
-import { state, shared, gameMode, getUpgradeCount, prestigeMultiplier } from './state.js';
+import { state, shared, gameMode, getUpgradeCount, getTotalPrestigeMultiplier } from './state.js';
 import { _st } from './utils.js';
 import { gameArea } from './dom.js';
 import { halos, addHalo } from './effects/halos.js';
@@ -55,7 +55,7 @@ function handleClick(e) {
   }, COMBO_DECAY));
 
   const multiplier = getComboMultiplier();
-  const gain = Math.floor(state.clickPower * multiplier * prestigeMultiplier);
+  const gain = Math.floor(state.clickPower * multiplier * getTotalPrestigeMultiplier());
 
   state.lumens += gain;
   state.totalLumens += gain;

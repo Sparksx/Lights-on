@@ -43,11 +43,20 @@
     <div id="mp-overlay-content">
       <button id="mp-overlay-close">&times;</button>
       <div id="mp-overlay-title">L'Équilibre Cosmique</div>
+
+      <!-- Season info -->
+      <div id="mp-overlay-season">
+        <span id="mp-overlay-season-num">Saison 1</span>
+        <span id="mp-overlay-season-timer"></span>
+      </div>
+
       <div id="mp-overlay-user">
         <img id="mp-overlay-avatar" src="" alt="">
         <span id="mp-overlay-name"></span>
+        <span id="mp-overlay-grade"></span>
         <button id="mp-overlay-logout">Déconnexion</button>
       </div>
+
       <div id="mp-overlay-war">
         <div id="mp-overlay-gauge">
           <div id="mp-overlay-light-bar"></div>
@@ -59,6 +68,69 @@
           <span id="mp-overlay-dark-total">0</span>
         </div>
       </div>
+
+      <!-- Player contribution stats -->
+      <div id="mp-overlay-player" class="hidden">
+        <div id="mp-overlay-player-title">Ma contribution</div>
+        <div id="mp-overlay-player-contrib">0</div>
+        <div id="mp-overlay-player-streak"></div>
+
+        <!-- Contribution rate selector -->
+        <div id="mp-overlay-rate">
+          <div id="mp-overlay-rate-label">Taux de contribution</div>
+          <div id="mp-overlay-rate-btns">
+            <button class="mp-rate-btn" data-rate="10">10%</button>
+            <button class="mp-rate-btn" data-rate="25">25%</button>
+            <button class="mp-rate-btn" data-rate="50">50%</button>
+            <button class="mp-rate-btn" data-rate="100">100%</button>
+          </div>
+          <div id="mp-overlay-rate-desc">Part de vos lumens envoyée à la guerre cosmique</div>
+        </div>
+      </div>
+
+      <!-- Leaderboard button -->
+      <button id="mp-overlay-leaderboard-btn">Classement</button>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD OVERLAY -->
+  <div id="mp-leaderboard" class="hidden">
+    <div id="mp-leaderboard-backdrop"></div>
+    <div id="mp-leaderboard-content">
+      <button id="mp-leaderboard-close">&times;</button>
+      <div id="mp-leaderboard-title">Classement — Saison</div>
+      <div id="mp-leaderboard-tabs">
+        <button class="mp-lb-tab active" data-side="on">Lumière</button>
+        <button class="mp-lb-tab" data-side="off">Ombre</button>
+      </div>
+      <div id="mp-leaderboard-list"></div>
+      <div id="mp-leaderboard-player-rank"></div>
+    </div>
+  </div>
+
+  <!-- SEASON END OVERLAY -->
+  <div id="season-end-overlay" class="hidden">
+    <div id="season-end-backdrop"></div>
+    <div id="season-end-content">
+      <div id="season-end-orb"></div>
+      <div id="season-end-title"></div>
+      <div id="season-end-result"></div>
+      <div id="season-end-stats">
+        <span id="season-end-light">0 lm</span>
+        <span id="season-end-vs">vs</span>
+        <span id="season-end-dark">0 ob</span>
+      </div>
+      <div id="season-end-player">
+        <div id="season-end-grade"></div>
+        <div id="season-end-contrib"></div>
+        <div id="season-end-rank"></div>
+      </div>
+      <div id="season-end-reward">
+        <div id="season-end-reward-text"></div>
+        <div id="season-end-reward-bonus" class="hidden"></div>
+      </div>
+      <button id="season-end-claim" class="hidden">Récupérer</button>
+      <button id="season-end-continue" class="hidden">Nouvelle saison</button>
     </div>
   </div>
 
