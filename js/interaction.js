@@ -1,7 +1,7 @@
 // === Interaction — Rubbing/swiping, combo, anti-auto-clicker ===
 'use strict';
 
-import { state, gameMode, getUpgradeCount, shared, getSaveKey, prestigeMultiplier } from './state.js';
+import { state, gameMode, getUpgradeCount, shared, getSaveKey, getTotalPrestigeMultiplier } from './state.js';
 import { _st, _now } from './utils.js';
 import { canvas, ctx } from './canvas.js';
 import { halos } from './effects/halos.js';
@@ -32,7 +32,7 @@ export function moveRub(x, y, checkMilestones, updateUI) {
   lastRubY = y;
 
   if (rubDistance >= RUB_THRESHOLD) {
-    const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3 * prestigeMultiplier));
+    const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3 * getTotalPrestigeMultiplier()));
     state.lumens += rubPower;
     state.totalLumens += rubPower;
     rubDistance -= RUB_THRESHOLD;

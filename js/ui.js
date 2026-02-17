@@ -1,7 +1,7 @@
 // === UI — HUD, progress bar, toggle notification ===
 'use strict';
 
-import { state, VICTORY_LUMENS, shared, getUpgradeCount, prestigeLevel, prestigeMultiplier } from './state.js';
+import { state, VICTORY_LUMENS, shared, getUpgradeCount, prestigeLevel, getTotalPrestigeMultiplier, mpPrestigeBonus } from './state.js';
 import { formatNumber, unitName, rgba } from './utils.js';
 import { progressFill, upgradeToggle } from './dom.js';
 import { canvas, ctx } from './canvas.js';
@@ -42,7 +42,7 @@ export function drawHUD() {
   var y = padding + fontSize + (window.CSS && CSS.supports('top', 'env(safe-area-inset-top)') ? 44 : 0);
   ctx.fillText(formatNumber(Math.floor(state.lumens)) + ' ' + unitName(), padding, y);
   if (state.lumensPerSecond > 0) {
-    var lps = state.lumensPerSecond * prestigeMultiplier;
+    var lps = state.lumensPerSecond * getTotalPrestigeMultiplier();
     ctx.fillText('+' + formatNumber(Math.floor(lps)) + '/s', padding, y + fontSize + 4);
   }
   var mult = getComboMultiplier();
@@ -50,10 +50,10 @@ export function drawHUD() {
     ctx.fillStyle = rgba(255, 255, 255, 0.5);
     ctx.fillText('x' + mult, padding, y + (fontSize + 4) * 2);
   }
-  if (prestigeLevel > 0) {
+  if (prestigeLevel > 0 || mpPrestigeBonus > 0) {
     ctx.textAlign = 'right';
     ctx.fillStyle = rgba(255, 255, 255, 0.2);
-    ctx.fillText('P' + prestigeLevel + ' x' + prestigeMultiplier.toFixed(1), canvas.width - padding, y);
+    ctx.fillText('P' + prestigeLevel + ' x' + getTotalPrestigeMultiplier().toFixed(1), canvas.width - padding, y);
   }
   ctx.restore();
 }

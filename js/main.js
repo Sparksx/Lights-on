@@ -1,7 +1,7 @@
 // === Main — Entry point, mode selection, init ===
 'use strict';
 
-import { state, gameMode, gameStarted, setGameMode, setGameStarted, getSaveKey, prestigeLevel, prestigeMultiplier } from './state.js';
+import { state, gameMode, gameStarted, setGameMode, setGameStarted, getSaveKey, prestigeLevel, prestigeMultiplier, getTotalPrestigeMultiplier, setMpPrestigeBonus } from './state.js';
 import { _st, _si, _now, formatNumber, unitName } from './utils.js';
 import { modeSelect, modeOn, modeOff, gameArea, upgradeToggle, upgradePanel, victoryScreen, prestigeInfo } from './dom.js';
 import { resizeCanvas } from './canvas.js';
@@ -13,8 +13,9 @@ import { showIntro } from './intro.js';
 import { setupInputListeners } from './click.js';
 import { showSwitch, setupVictoryListeners } from './victory.js';
 import { regenerateStars } from './effects/stars.js';
-import { initMultiplayer, mp, onMultiplayerUpdate, notifySideChange } from './multiplayer.js';
+import { initMultiplayer, mp, onMultiplayerUpdate, onSeasonEnd, onRewardReceived, notifySideChange, setContributionRate } from './multiplayer.js';
 import { setServerAvailable, isOnboardingDone, isMultiplayerActive, checkOnboarding } from './onboarding.js';
+import { showSeasonEnd, showSeasonEndBroadcast } from './season-end.js';
 
 function startGame(mode) {
   if (gameStarted) return;
@@ -77,7 +78,7 @@ function initGame() {
       var maxOffline = 3600;
       elapsed = Math.min(elapsed, maxOffline);
       if (elapsed > 10) {
-        var offlineGain = Math.floor(state.lumensPerSecond * elapsed * 0.5 * prestigeMultiplier);
+        var offlineGain = Math.floor(state.lumensPerSecond * elapsed * 0.5 * getTotalPrestigeMultiplier());
         if (offlineGain > 0) {
           state.lumens += offlineGain;
           state.totalLumens += offlineGain;
@@ -164,12 +165,30 @@ var mpOverlayClose  = document.getElementById('mp-overlay-close');
 var mpOverlayBackdrop = document.getElementById('mp-overlay-backdrop');
 var mpOverlayAvatar = document.getElementById('mp-overlay-avatar');
 var mpOverlayName   = document.getElementById('mp-overlay-name');
+var mpOverlayGrade  = document.getElementById('mp-overlay-grade');
 var mpOverlayLogout = document.getElementById('mp-overlay-logout');
 var mpOverlayLightBar   = document.getElementById('mp-overlay-light-bar');
 var mpOverlayDarkBar    = document.getElementById('mp-overlay-dark-bar');
 var mpOverlayLightTotal = document.getElementById('mp-overlay-light-total');
 var mpOverlayDarkTotal  = document.getElementById('mp-overlay-dark-total');
 var mpOverlayOnline     = document.getElementById('mp-overlay-online');
+var mpOverlaySeasonNum  = document.getElementById('mp-overlay-season-num');
+var mpOverlaySeasonTimer = document.getElementById('mp-overlay-season-timer');
+var mpOverlaySeason     = document.getElementById('mp-overlay-season');
+var mpOverlayPlayer     = document.getElementById('mp-overlay-player');
+var mpOverlayPlayerContrib = document.getElementById('mp-overlay-player-contrib');
+var mpOverlayPlayerStreak  = document.getElementById('mp-overlay-player-streak');
+var mpOverlayRateBtns   = document.querySelectorAll('.mp-rate-btn');
+var mpOverlayLeaderboardBtn = document.getElementById('mp-overlay-leaderboard-btn');
+
+// Leaderboard DOM
+var mpLeaderboard        = document.getElementById('mp-leaderboard');
+var mpLeaderboardBackdrop = document.getElementById('mp-leaderboard-backdrop');
+var mpLeaderboardClose   = document.getElementById('mp-leaderboard-close');
+var mpLeaderboardTitle   = document.getElementById('mp-leaderboard-title');
+var mpLeaderboardTabs    = document.querySelectorAll('.mp-lb-tab');
+var mpLeaderboardList    = document.getElementById('mp-leaderboard-list');
+var mpLeaderboardPlayerRank = document.getElementById('mp-leaderboard-player-rank');
 
 function formatShort(n) {
   if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
@@ -184,12 +203,9 @@ function updateBalanceCircle(light, dark) {
   var total = light + dark;
   var lightPct = total > 0 ? (light / total) * 100 : 50;
 
-  // For ON mode: white = light side, starts from top (270deg)
-  // For OFF mode: colors swap via CSS, same logic
   mpBalanceCircle.style.background =
     'conic-gradient(from 270deg, #fff 0%, #fff ' + lightPct + '%, #000 ' + lightPct + '%, #000 100%)';
 
-  // In OFF mode, the CSS override swaps the colors
   if (gameMode === 'off') {
     mpBalanceCircle.style.background =
       'conic-gradient(from 270deg, #000 0%, #000 ' + lightPct + '%, #fff ' + lightPct + '%, #fff 100%)';
@@ -225,6 +241,14 @@ function updateMultiplayerUI(mpState) {
     mpOverlayLogout.style.display = 'none';
   }
 
+  // Grade badge
+  if (mpState.profile && mpState.profile.grade && mpState.profile.grade !== 'none') {
+    mpOverlayGrade.textContent = mpState.profile.grade;
+    mpOverlayGrade.style.display = '';
+  } else {
+    mpOverlayGrade.style.display = 'none';
+  }
+
   // Overlay war gauge
   var total = light + dark;
   if (total > 0) {
@@ -237,6 +261,57 @@ function updateMultiplayerUI(mpState) {
   mpOverlayLightTotal.textContent = formatShort(light);
   mpOverlayDarkTotal.textContent = formatShort(dark);
   mpOverlayOnline.textContent = mpState.online.total + ' en ligne';
+
+  // Season info
+  if (mpState.seasonInfo.season > 0) {
+    mpOverlaySeasonNum.textContent = 'Saison ' + mpState.seasonInfo.season;
+    if (mpState.seasonInfo.isLastDay) {
+      mpOverlaySeasonTimer.textContent = 'Dernières heures !';
+      mpOverlaySeason.classList.add('last-day');
+    } else if (mpState.seasonInfo.remainingDays > 0) {
+      mpOverlaySeasonTimer.textContent = mpState.seasonInfo.remainingDays + 'j restants';
+      mpOverlaySeason.classList.remove('last-day');
+    } else {
+      mpOverlaySeasonTimer.textContent = '';
+      mpOverlaySeason.classList.remove('last-day');
+    }
+  }
+
+  // Player contribution section
+  if (mpState.user && mpState.profile) {
+    mpOverlayPlayer.classList.remove('hidden');
+    mpOverlayPlayerContrib.textContent = formatShort(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
+
+    if (mpState.profile.streakDays > 0) {
+      var streakText = mpState.profile.streakDays + 'j consécutifs';
+      if (mpState.profile.streakMultiplier > 1) {
+        streakText += ' (x' + mpState.profile.streakMultiplier.toFixed(1) + ')';
+      }
+      mpOverlayPlayerStreak.textContent = streakText;
+    } else {
+      mpOverlayPlayerStreak.textContent = '';
+    }
+
+    // Update rate buttons
+    updateRateButtons(mpState.contributionRate);
+
+    // Update local mp prestige bonus
+    if (mpState.profile.mpPrestigeBonus > 0) {
+      setMpPrestigeBonus(mpState.profile.mpPrestigeBonus);
+    }
+  } else {
+    mpOverlayPlayer.classList.add('hidden');
+  }
+}
+
+function updateRateButtons(activeRate) {
+  mpOverlayRateBtns.forEach(function (btn) {
+    if (Number(btn.dataset.rate) === activeRate) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
 }
 
 onMultiplayerUpdate(updateMultiplayerUI);
@@ -267,8 +342,135 @@ mpOverlayLogout.addEventListener('click', function (e) {
   e.stopPropagation();
   fetch('/auth/logout', { method: 'POST' }).then(function () {
     mp.user = null;
+    mp.profile = null;
     updateMultiplayerUI(mp);
   });
+});
+
+// --- Contribution rate buttons ---
+mpOverlayRateBtns.forEach(function (btn) {
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var rate = Number(btn.dataset.rate);
+    setContributionRate(rate);
+    updateRateButtons(rate);
+  });
+});
+
+// --- Leaderboard ---
+var currentLeaderboardSide = 'on';
+var leaderboardData = null;
+
+mpOverlayLeaderboardBtn.addEventListener('click', function (e) {
+  e.stopPropagation();
+  closeOverlay();
+  openLeaderboard();
+});
+
+function openLeaderboard() {
+  mpLeaderboard.classList.remove('hidden');
+  fetchLeaderboard();
+}
+
+function closeLeaderboard() {
+  mpLeaderboard.classList.add('hidden');
+}
+
+mpLeaderboardClose.addEventListener('click', function (e) {
+  e.stopPropagation();
+  closeLeaderboard();
+});
+
+mpLeaderboardBackdrop.addEventListener('click', function (e) {
+  e.stopPropagation();
+  closeLeaderboard();
+});
+
+mpLeaderboardTabs.forEach(function (tab) {
+  tab.addEventListener('click', function (e) {
+    e.stopPropagation();
+    currentLeaderboardSide = tab.dataset.side;
+    mpLeaderboardTabs.forEach(function (t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    renderLeaderboard();
+  });
+});
+
+function fetchLeaderboard() {
+  fetch('/api/leaderboard')
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      leaderboardData = data;
+      mpLeaderboardTitle.textContent = 'Classement — Saison ' + (data.season || '');
+      renderLeaderboard();
+    })
+    .catch(function () {
+      mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Indisponible</div>';
+    });
+}
+
+function renderLeaderboard() {
+  if (!leaderboardData) return;
+
+  var entries = currentLeaderboardSide === 'on' ? leaderboardData.light : leaderboardData.dark;
+  mpLeaderboardList.innerHTML = '';
+
+  if (!entries || entries.length === 0) {
+    mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Aucun contributeur</div>';
+  } else {
+    entries.forEach(function (entry) {
+      var el = document.createElement('div');
+      el.className = 'mp-lb-entry';
+
+      var rankEl = document.createElement('span');
+      rankEl.className = 'mp-lb-rank';
+      rankEl.textContent = '#' + entry.rank;
+
+      var nameEl = document.createElement('span');
+      nameEl.className = 'mp-lb-name';
+      nameEl.textContent = entry.name;
+
+      var totalEl = document.createElement('span');
+      totalEl.className = 'mp-lb-total';
+      totalEl.textContent = formatShort(entry.total);
+
+      el.appendChild(rankEl);
+
+      if (entry.avatar) {
+        var avatarEl = document.createElement('img');
+        avatarEl.className = 'mp-lb-avatar';
+        avatarEl.src = entry.avatar;
+        avatarEl.alt = '';
+        el.appendChild(avatarEl);
+      }
+
+      el.appendChild(nameEl);
+      el.appendChild(totalEl);
+      mpLeaderboardList.appendChild(el);
+    });
+  }
+
+  // Player's own rank
+  if (leaderboardData.playerRank && leaderboardData.playerRank.side === currentLeaderboardSide) {
+    mpLeaderboardPlayerRank.textContent =
+      'Votre rang : #' + leaderboardData.playerRank.rank +
+      ' (' + formatShort(leaderboardData.playerRank.total) + ')';
+  } else {
+    mpLeaderboardPlayerRank.textContent = '';
+  }
+}
+
+// --- Season end events ---
+onSeasonEnd(function (data) {
+  showSeasonEndBroadcast(data);
+});
+
+// --- Unclaimed rewards (shown on connect) ---
+onRewardReceived(function (rewards) {
+  if (rewards.length > 0) {
+    // Show the most recent unclaimed reward
+    showSeasonEnd(rewards[0]);
+  }
 });
 
 // --- Onboarding completion callback ---

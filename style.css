@@ -1340,3 +1340,539 @@ body.mode-off #mp-onboarding-skip {
 body.mode-off #mp-onboarding-skip:hover {
   color: rgba(0, 0, 0, 0.6);
 }
+
+/* === MULTIPLAYER OVERLAY — Enhanced sections === */
+
+/* Season info */
+#mp-overlay-season {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  opacity: 0.4;
+}
+
+body.mode-off #mp-overlay-season {
+  color: #000;
+}
+
+#mp-overlay-season-timer {
+  opacity: 0.7;
+}
+
+#mp-overlay-season.last-day #mp-overlay-season-timer {
+  color: rgba(255, 100, 100, 0.9);
+  animation: pulse-alert 2s ease-in-out infinite;
+}
+
+@keyframes pulse-alert {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Grade badge */
+#mp-overlay-grade {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.7;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+body.mode-off #mp-overlay-grade {
+  color: #000;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Player contribution section */
+#mp-overlay-player {
+  width: 100%;
+  text-align: center;
+}
+
+#mp-overlay-player-title {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.4;
+  margin-bottom: 6px;
+}
+
+body.mode-off #mp-overlay-player-title {
+  color: #000;
+}
+
+#mp-overlay-player-contrib {
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+body.mode-off #mp-overlay-player-contrib {
+  color: #000;
+}
+
+#mp-overlay-player-streak {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-top: 4px;
+}
+
+body.mode-off #mp-overlay-player-streak {
+  color: #000;
+}
+
+/* Contribution rate selector */
+#mp-overlay-rate {
+  margin-top: 12px;
+  text-align: center;
+}
+
+#mp-overlay-rate-label {
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.35;
+  margin-bottom: 8px;
+}
+
+body.mode-off #mp-overlay-rate-label {
+  color: #000;
+}
+
+#mp-overlay-rate-btns {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.mp-rate-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.4);
+  padding: 4px 10px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.6rem;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  border-radius: 2px;
+}
+
+.mp-rate-btn:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mp-rate-btn.active {
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.mode-off .mp-rate-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: rgba(0, 0, 0, 0.4);
+}
+
+body.mode-off .mp-rate-btn:hover {
+  border-color: rgba(0, 0, 0, 0.5);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body.mode-off .mp-rate-btn.active {
+  border-color: rgba(0, 0, 0, 0.7);
+  color: #000;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+#mp-overlay-rate-desc {
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  opacity: 0.25;
+  margin-top: 6px;
+}
+
+body.mode-off #mp-overlay-rate-desc {
+  color: #000;
+}
+
+/* Leaderboard button */
+#mp-overlay-leaderboard-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+  padding: 6px 20px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.65rem;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+#mp-overlay-leaderboard-btn:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+body.mode-off #mp-overlay-leaderboard-btn {
+  border-color: rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+body.mode-off #mp-overlay-leaderboard-btn:hover {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* === LEADERBOARD OVERLAY === */
+#mp-leaderboard {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  z-index: 75;
+}
+
+#mp-leaderboard-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.92);
+  animation: offlineFadeIn 0.3s ease;
+}
+
+body.mode-off #mp-leaderboard-backdrop {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+#mp-leaderboard-content {
+  position: relative;
+  z-index: 1;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 40px 24px 32px;
+  padding-top: calc(40px + env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: overlaySlideIn 0.3s ease;
+  max-height: 100dvh;
+  overflow-y: auto;
+}
+
+#mp-leaderboard-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+#mp-leaderboard-close:hover {
+  opacity: 1;
+}
+
+body.mode-off #mp-leaderboard-close {
+  color: #000;
+}
+
+#mp-leaderboard-title {
+  font-size: clamp(0.8rem, 2.5vw, 1rem);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+body.mode-off #mp-leaderboard-title {
+  color: #000;
+}
+
+/* Tabs */
+#mp-leaderboard-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.mp-lb-tab {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.4);
+  padding: 4px 14px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.65rem;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: border-color 0.2s, color 0.2s;
+  border-radius: 2px;
+}
+
+.mp-lb-tab.active {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+body.mode-off .mp-lb-tab {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: rgba(0, 0, 0, 0.4);
+}
+
+body.mode-off .mp-lb-tab.active {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: #000;
+}
+
+/* Leaderboard list */
+#mp-leaderboard-list {
+  width: 100%;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.mp-lb-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  opacity: 0.6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+body.mode-off .mp-lb-entry {
+  color: #000;
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+.mp-lb-rank {
+  width: 24px;
+  text-align: right;
+  opacity: 0.4;
+}
+
+.mp-lb-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.mp-lb-name {
+  flex: 1;
+}
+
+.mp-lb-total {
+  opacity: 0.5;
+}
+
+#mp-leaderboard-player-rank {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  opacity: 0.4;
+  text-align: center;
+}
+
+body.mode-off #mp-leaderboard-player-rank {
+  color: #000;
+}
+
+/* === SEASON END OVERLAY === */
+#season-end-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  z-index: 80;
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+
+#season-end-overlay.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#season-end-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  animation: offlineFadeIn 0.5s ease;
+}
+
+body.mode-off #season-end-backdrop {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+#season-end-content {
+  position: relative;
+  z-index: 1;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 60px 24px 40px;
+  padding-top: calc(60px + env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: overlaySlideIn 0.5s ease;
+  text-align: center;
+}
+
+#season-end-orb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.5),
+              0 0 80px 30px rgba(255, 255, 255, 0.2);
+  animation: onboarding-orb-pulse 3s ease-in-out infinite;
+  margin-bottom: 12px;
+}
+
+body.mode-off #season-end-orb {
+  background: #000;
+  box-shadow: 0 0 40px 15px rgba(0, 0, 0, 0.3),
+              0 0 80px 30px rgba(0, 0, 0, 0.15);
+}
+
+#season-end-title {
+  font-size: clamp(0.9rem, 3vw, 1.3rem);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: onboarding-text1-in 1.5s ease 0.3s forwards;
+}
+
+body.mode-off #season-end-title {
+  color: #000;
+}
+
+#season-end-result {
+  font-size: clamp(0.7rem, 2vw, 0.9rem);
+  letter-spacing: 2px;
+  opacity: 0;
+  animation: onboarding-text2-in 1.5s ease 1s forwards;
+}
+
+body.mode-off #season-end-result {
+  color: #000;
+}
+
+#season-end-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  opacity: 0;
+  animation: onboarding-text2-in 1s ease 1.5s forwards;
+}
+
+body.mode-off #season-end-stats {
+  color: #000;
+}
+
+#season-end-vs {
+  opacity: 0.3;
+  font-size: 0.55rem;
+}
+
+#season-end-player {
+  opacity: 0;
+  animation: onboarding-text2-in 1s ease 2s forwards;
+}
+
+#season-end-grade,
+#season-end-contrib,
+#season-end-rank {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+
+body.mode-off #season-end-player {
+  color: #000;
+}
+
+#season-end-reward {
+  margin-top: 8px;
+  opacity: 0;
+  animation: onboarding-text2-in 1s ease 2.5s forwards;
+}
+
+#season-end-reward-text {
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+body.mode-off #season-end-reward-text {
+  color: #000;
+}
+
+#season-end-reward-bonus {
+  font-size: 1.1rem;
+  letter-spacing: 3px;
+  margin-top: 8px;
+  animation: pulse-alert 2s ease-in-out infinite;
+}
+
+body.mode-off #season-end-reward-bonus {
+  color: #000;
+}
+
+#season-end-claim,
+#season-end-continue {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 10px 28px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: border-color 0.2s, color 0.2s;
+  margin-top: 8px;
+  opacity: 0;
+  animation: onboarding-actions-in 0.6s ease 3s forwards;
+}
+
+#season-end-claim:hover,
+#season-end-continue:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+  color: #fff;
+}
+
+body.mode-off #season-end-claim,
+body.mode-off #season-end-continue {
+  border-color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body.mode-off #season-end-claim:hover,
+body.mode-off #season-end-continue:hover {
+  border-color: rgba(0, 0, 0, 0.8);
+  color: #000;
+}
