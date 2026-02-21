@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Cosmic War — one row per active season
 CREATE TABLE IF NOT EXISTS cosmic_war (
   id SERIAL PRIMARY KEY,
-  season INT NOT NULL DEFAULT 1,
+  season INT NOT NULL DEFAULT 1 UNIQUE,
   total_light BIGINT DEFAULT 0,
   total_dark BIGINT DEFAULT 0,
   started_at TIMESTAMPTZ DEFAULT NOW(),
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS cosmic_war (
 
 -- Seed the first season
 INSERT INTO cosmic_war (season) VALUES (1)
-  ON CONFLICT DO NOTHING;
+  ON CONFLICT (season) DO NOTHING;
 
 -- Per-player contributions to the current cosmic war
 CREATE TABLE IF NOT EXISTS contributions (
@@ -72,6 +72,10 @@ CREATE TABLE IF NOT EXISTS season_rewards (
 CREATE INDEX IF NOT EXISTS idx_season_rewards_user ON season_rewards(user_id);
 CREATE INDEX IF NOT EXISTS idx_season_rewards_season ON season_rewards(season);
 
+-- Unique index for contribution aggregation (upsert per user+season+side)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_contributions_user_season_mode
+  ON contributions(user_id, season, game_mode);
+
 -- Migrations: add columns if they don't exist (safe for existing databases)
 DO $$ BEGIN
   ALTER TABLE users ADD COLUMN IF NOT EXISTS contribution_rate INT DEFAULT 25;
@@ -80,5 +84,11 @@ DO $$ BEGIN
   ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_prestige_bonus NUMERIC(6,2) DEFAULT 0;
   ALTER TABLE cosmic_war ADD COLUMN IF NOT EXISTS duration_days INT DEFAULT 14;
   ALTER TABLE cosmic_war ADD COLUMN IF NOT EXISTS winner VARCHAR(5);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- Add UNIQUE constraint on cosmic_war.season for existing databases
+DO $$ BEGIN
+  ALTER TABLE cosmic_war ADD CONSTRAINT cosmic_war_season_unique UNIQUE (season);
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;

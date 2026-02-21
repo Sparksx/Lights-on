@@ -2157,3 +2157,57 @@ body.mode-off .mp-streak-toast {
   color: rgba(0, 0, 0, 0.8);
   border-color: rgba(200, 50, 50, 0.4);
 }
+
+/* === OVERLAY LOGIN PROMPT (unauthenticated) === */
+#mp-overlay-login {
+  text-align: center;
+  margin-top: 8px;
+}
+
+#mp-overlay-login-text {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-bottom: 10px;
+}
+
+#mp-overlay-login-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.mp-login-btn {
+  display: inline-block;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 8px 18px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.mp-login-btn:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+body.mode-off .mp-login-btn {
+  border-color: rgba(0, 0, 0, 0.3);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body.mode-off .mp-login-btn:hover {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: #000;
+}
+
+body.mode-off #mp-overlay-login-text {
+  color: #000;
+}

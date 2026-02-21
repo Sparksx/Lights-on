@@ -86,6 +86,8 @@ function startGame(mode) {
     gameArea.classList.remove('hidden');
     resizeCanvas();
     initGame();
+    // Notify server of side choice after game is initialized
+    notifySideChange(mode);
   }, 700);
 }
 
@@ -175,11 +177,9 @@ function initGame() {
 // --- Mode selection ---
 modeOn.addEventListener('click', function () {
   startGame('on');
-  notifySideChange('on');
 });
 modeOff.addEventListener('click', function () {
   startGame('off');
-  notifySideChange('off');
 });
 
 // Check for saved game — skip landing if save exists
@@ -227,6 +227,7 @@ var mpOverlayPlayerPrestige = document.getElementById('mp-overlay-player-prestig
 var mpOverlayRateBtns = document.querySelectorAll('.mp-rate-btn');
 var mpOverlayLeaderboardBtn = document.getElementById('mp-overlay-leaderboard-btn');
 var mpBalanceGrade = document.getElementById('mp-balance-grade');
+var mpOverlayLogin = document.getElementById('mp-overlay-login');
 
 // Leaderboard DOM
 var mpLeaderboard = document.getElementById('mp-leaderboard');
@@ -280,10 +281,12 @@ function updateMultiplayerUI(mpState) {
       mpOverlayAvatar.style.display = 'none';
     }
     mpOverlayLogout.style.display = '';
+    mpOverlayLogin.classList.add('hidden');
   } else {
     mpOverlayName.textContent = '';
     mpOverlayAvatar.style.display = 'none';
     mpOverlayLogout.style.display = 'none';
+    mpOverlayLogin.classList.remove('hidden');
   }
 
   // Grade badge

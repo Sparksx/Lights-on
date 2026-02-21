@@ -58,6 +58,15 @@
           <button id="mp-overlay-logout">Déconnexion</button>
         </div>
 
+        <!-- Login prompt for unauthenticated players -->
+        <div id="mp-overlay-login" class="hidden">
+          <div id="mp-overlay-login-text">Connectez-vous pour contribuer</div>
+          <div id="mp-overlay-login-btns">
+            <a href="/auth/google" class="mp-login-btn mp-login-google">Google</a>
+            <a href="/auth/discord" class="mp-login-btn mp-login-discord">Discord</a>
+          </div>
+        </div>
+
         <div id="mp-overlay-war">
           <div id="mp-overlay-gauge">
             <div id="mp-overlay-light-bar"></div>

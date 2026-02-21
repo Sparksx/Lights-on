@@ -73,16 +73,20 @@ async function addToCosmicWar(side, amount) {
 }
 
 /**
- * Record a player's contribution.
+ * Record a player's contribution (upsert — aggregates per user+season+side).
+ * @param {string} userId
+ * @param {number} seasonNum - Season number (passed by caller to avoid redundant query)
+ * @param {string} side - 'on' or 'off'
+ * @param {number} amount
  */
-async function recordContribution(userId, gameMode, amount) {
-  const season = await getCurrentSeason();
-  if (!season) return;
-
+async function recordContribution(userId, seasonNum, side, amount) {
   await pool.query(
     `INSERT INTO contributions (user_id, season, game_mode, lumens_contributed)
-     VALUES ($1, $2, $3, $4)`,
-    [userId, season.season, gameMode, Math.floor(amount)],
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, season, game_mode)
+     DO UPDATE SET lumens_contributed = contributions.lumens_contributed + $4,
+                   contributed_at = NOW()`,
+    [userId, seasonNum, side, Math.floor(amount)],
   );
 }
 
@@ -386,9 +390,9 @@ async function checkAndEndSeason() {
   // Generate rewards for all contributing players
   await generateSeasonRewards(season.season, winner);
 
-  // Create the next season
+  // Create the next season (ON CONFLICT prevents duplicates from concurrent checks)
   const nextSeason = season.season + 1;
-  await pool.query(`INSERT INTO cosmic_war (season) VALUES ($1)`, [nextSeason]);
+  await pool.query(`INSERT INTO cosmic_war (season) VALUES ($1) ON CONFLICT (season) DO NOTHING`, [nextSeason]);
 
   console.log(`[db] Season ${nextSeason} started. Previous winner: ${winner}`);
 
