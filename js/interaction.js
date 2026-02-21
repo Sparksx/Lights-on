@@ -5,6 +5,7 @@ import { state, gameMode, getUpgradeCount, shared, getSaveKey, getTotalPrestigeM
 import { _st, _now } from './utils.js';
 import { canvas, ctx } from './canvas.js';
 import { halos } from './effects/halos.js';
+import { reportLumens } from './multiplayer.js';
 
 // --- Rubbing/swiping mechanic ---
 let isRubbing = false;
@@ -36,6 +37,7 @@ export function moveRub(x, y, checkMilestones, updateUI) {
     const rubPower = Math.max(1, Math.floor(state.clickPower * 0.3 * getTotalPrestigeMultiplier()));
     state.lumens += rubPower;
     state.totalLumens += rubPower;
+    reportLumens(rubPower);
     rubDistance -= RUB_THRESHOLD;
 
     if (gameMode === 'off') {

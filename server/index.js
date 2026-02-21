@@ -250,11 +250,20 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Player changes contribution rate
-  socket.on('set-contribution-rate', async (data) => {
-    if (!user?.id) return;
-    const rate = Number(data?.rate);
-    await setPlayerContributionRate(user.id, rate);
+  // Player changes contribution rate (with acknowledgment)
+  socket.on('set-contribution-rate', async (data, ack) => {
+    if (!user?.id) {
+      if (typeof ack === 'function') ack({ error: 'Not authenticated' });
+      return;
+    }
+    try {
+      const rate = Number(data?.rate);
+      const success = await setPlayerContributionRate(user.id, rate);
+      if (typeof ack === 'function') ack(success ? { ok: true } : { error: 'Invalid rate' });
+    } catch (err) {
+      console.error('[socket] set-contribution-rate error:', err);
+      if (typeof ack === 'function') ack({ error: 'Server error' });
+    }
   });
 
   // Player claims a season reward

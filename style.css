@@ -1095,6 +1095,22 @@ body.mode-off #reset-btn.confirming {
   opacity: 1;
 }
 
+#mp-balance.disconnected #mp-balance-pip {
+  opacity: 1;
+  background: rgba(255, 100, 100, 0.7);
+  animation: pip-blink 2s ease-in-out infinite;
+}
+
+@keyframes pip-blink {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes balance-breathe {
   0%,
   100% {
@@ -2068,4 +2084,46 @@ body.mode-off #season-end-claim:hover,
 body.mode-off #season-end-continue:hover {
   border-color: rgba(0, 0, 0, 0.8);
   color: #000;
+}
+
+/* === STREAK LOSS TOAST === */
+.mp-streak-toast {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.85);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 10px 20px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  border-radius: 4px;
+  animation: toast-in 0.4s ease;
+  white-space: nowrap;
+}
+
+.mp-streak-toast.fade-out {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+body.mode-off .mp-streak-toast {
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(0, 0, 0, 0.8);
+  border-color: rgba(200, 50, 50, 0.4);
 }

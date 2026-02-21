@@ -39,8 +39,10 @@ import {
   onMultiplayerUpdate,
   onSeasonEnd,
   onRewardReceived,
+  onStreakChange,
   notifySideChange,
   setContributionRate,
+  reportLumens,
 } from './multiplayer.js';
 import { setServerAvailable, isOnboardingDone, isMultiplayerActive, checkOnboarding } from './onboarding.js';
 import { showSeasonEnd, showSeasonEndBroadcast } from './season-end.js';
@@ -112,6 +114,7 @@ function initGame() {
         if (offlineGain > 0) {
           state.lumens += offlineGain;
           state.totalLumens += offlineGain;
+          reportLumens(offlineGain);
           updateUI();
           var offlinePopup = document.getElementById('offline-popup');
           var offlineText = document.getElementById('offline-text');
@@ -232,14 +235,6 @@ var mpLeaderboardTabs = document.querySelectorAll('.mp-lb-tab');
 var mpLeaderboardList = document.getElementById('mp-leaderboard-list');
 var mpLeaderboardPlayerRank = document.getElementById('mp-leaderboard-player-rank');
 
-function formatShort(n) {
-  if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return String(n);
-}
-
 // --- Update balance indicator circle proportions ---
 function updateBalanceCircle(light, dark) {
   var total = light + dark;
@@ -256,10 +251,16 @@ function updateBalanceCircle(light, dark) {
 
 // --- Update the full overlay with current multiplayer state ---
 function updateMultiplayerUI(mpState) {
-  // Balance indicator: only show if onboarding is done and user connected
-  if (isMultiplayerActive() && mpState.connected) {
+  // Balance indicator: only show if onboarding is done
+  if (isMultiplayerActive()) {
     mpBalance.classList.remove('hidden');
-    mpBalance.classList.add('online');
+    if (mpState.connected) {
+      mpBalance.classList.add('online');
+      mpBalance.classList.remove('disconnected');
+    } else {
+      mpBalance.classList.remove('online');
+      mpBalance.classList.add('disconnected');
+    }
   }
 
   // Update balance proportions
@@ -300,8 +301,8 @@ function updateMultiplayerUI(mpState) {
     mpOverlayLightBar.style.width = '50%';
     mpOverlayDarkBar.style.width = '50%';
   }
-  mpOverlayLightTotal.textContent = formatShort(light);
-  mpOverlayDarkTotal.textContent = formatShort(dark);
+  mpOverlayLightTotal.textContent = formatNumber(light);
+  mpOverlayDarkTotal.textContent = formatNumber(dark);
   mpOverlayOnline.textContent = mpState.online.total + ' en ligne';
 
   // Season info
@@ -323,7 +324,7 @@ function updateMultiplayerUI(mpState) {
   if (mpState.user && mpState.profile) {
     mpOverlayPlayer.classList.remove('hidden');
     mpOverlayPlayerContrib.textContent =
-      formatShort(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
+      formatNumber(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
 
     if (mpState.profile.streakDays > 0) {
       var streakText = mpState.profile.streakDays + 'j consécutifs';
@@ -479,7 +480,7 @@ function renderLeaderboard() {
 
       var totalEl = document.createElement('span');
       totalEl.className = 'mp-lb-total';
-      totalEl.textContent = formatShort(entry.total);
+      totalEl.textContent = formatNumber(entry.total);
 
       el.appendChild(rankEl);
 
@@ -500,7 +501,7 @@ function renderLeaderboard() {
   // Player's own rank
   if (leaderboardData.playerRank && leaderboardData.playerRank.side === currentLeaderboardSide) {
     mpLeaderboardPlayerRank.textContent =
-      'Votre rang : #' + leaderboardData.playerRank.rank + ' (' + formatShort(leaderboardData.playerRank.total) + ')';
+      'Votre rang : #' + leaderboardData.playerRank.rank + ' (' + formatNumber(leaderboardData.playerRank.total) + ')';
   } else {
     mpLeaderboardPlayerRank.textContent = '';
   }
@@ -517,6 +518,22 @@ onRewardReceived(function (rewards) {
     // Show the most recent unclaimed reward
     showSeasonEnd(rewards[0]);
   }
+});
+
+// --- Streak loss notification ---
+onStreakChange(function (info) {
+  if (!info.reset) return;
+  // Show a brief toast notification about streak loss
+  var toast = document.createElement('div');
+  toast.className = 'mp-streak-toast';
+  toast.textContent = 'Série perdue (' + info.oldStreak + 'j) — multiplieur réinitialisé';
+  document.body.appendChild(toast);
+  _st(function () {
+    toast.classList.add('fade-out');
+    _st(function () {
+      toast.remove();
+    }, 600);
+  }, 4000);
 });
 
 // --- Onboarding completion callback ---

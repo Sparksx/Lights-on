@@ -28,6 +28,7 @@ import {
 import { checkMilestones } from './upgrades.js';
 import { updateUI } from './ui.js';
 import { save } from './save.js';
+import { reportLumens } from './multiplayer.js';
 
 function handleClick(e) {
   if (state.victoryReached || state.sunPurchased || shared.sunCinematicActive) return;
@@ -75,6 +76,7 @@ function handleClick(e) {
 
   state.lumens += gain;
   state.totalLumens += gain;
+  reportLumens(gain);
 
   addHalo(x, y);
   if (multiplier > 1) {

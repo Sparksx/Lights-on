@@ -3,6 +3,7 @@
 
 import { state, getTotalPrestigeMultiplier } from './state.js';
 import { _raf } from './utils.js';
+import { reportLumens } from './multiplayer.js';
 import { canvas, ctx } from './canvas.js';
 
 // Effects
@@ -65,6 +66,7 @@ export function passiveTick() {
     const gain = (state.lumensPerSecond * getTotalPrestigeMultiplier()) / 10; // called 10x per sec
     state.lumens += gain;
     state.totalLumens += gain;
+    reportLumens(gain);
     checkMilestones();
     updateUI();
   }

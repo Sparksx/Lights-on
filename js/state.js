@@ -64,8 +64,20 @@ export function getSaveKey() {
 // --- Multiplayer prestige bonus (permanent, from season rewards) ---
 export let mpPrestigeBonus = 0;
 
+function loadMpPrestigeBonus() {
+  try {
+    var raw = localStorage.getItem('light-mp-prestige-bonus');
+    if (raw) mpPrestigeBonus = Number(raw) || 0;
+  } catch (_) {}
+}
+
+loadMpPrestigeBonus();
+
 export function setMpPrestigeBonus(val) {
   mpPrestigeBonus = val;
+  try {
+    localStorage.setItem('light-mp-prestige-bonus', String(val));
+  } catch (_) {}
 }
 
 export function getTotalPrestigeMultiplier() {
