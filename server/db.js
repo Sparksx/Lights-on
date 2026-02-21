@@ -103,6 +103,9 @@ const GRADES_OFF = [
   { name: 'Néant', threshold: 100000000 },
 ];
 
+// Minimum contribution threshold to qualify for season rewards (grade index 1 = Flamme/Braise)
+const REWARD_MIN_GRADE_INDEX = 1;
+
 function computeGrade(totalContribution, side) {
   const grades = side === 'on' ? GRADES_ON : GRADES_OFF;
   let grade = 'none';
@@ -110,6 +113,12 @@ function computeGrade(totalContribution, side) {
     if (totalContribution >= g.threshold) grade = g.name;
   }
   return grade;
+}
+
+function gradeQualifiesForReward(grade, side) {
+  const grades = side === 'on' ? GRADES_ON : GRADES_OFF;
+  const gradeIndex = grades.findIndex((g) => g.name === grade);
+  return gradeIndex >= REWARD_MIN_GRADE_INDEX;
 }
 
 /**
@@ -154,23 +163,33 @@ async function getPlayerGrade(userId) {
  * Update the player's daily streak.
  * Called on each contribution — increments if new day, resets if gap > 1 day.
  */
+/**
+ * Normalize a DATE column value (could be Date object or string) to 'YYYY-MM-DD'.
+ */
+function toDateString(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val.toISOString().slice(0, 10);
+  return String(val).slice(0, 10);
+}
+
 async function updateStreak(userId) {
   const result = await pool.query(`SELECT streak_days, streak_last_date FROM users WHERE id = $1`, [userId]);
   if (result.rows.length === 0) return 0;
 
   const user = result.rows[0];
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  const lastDateStr = toDateString(user.streak_last_date);
 
-  if (user.streak_last_date === today) {
-    // Already contributed today
+  if (lastDateStr === today) {
+    // Already contributed today (UTC)
     return user.streak_days;
   }
 
   let newStreak;
-  if (user.streak_last_date) {
-    const lastDate = new Date(user.streak_last_date);
-    const todayDate = new Date(today);
-    const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+  if (lastDateStr) {
+    const lastDate = new Date(lastDateStr + 'T00:00:00Z');
+    const todayDate = new Date(today + 'T00:00:00Z');
+    const diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 1) {
       // Consecutive day
@@ -234,10 +253,12 @@ async function getPlayerProfile(userId) {
 
   // Check if streak is still active (contributed today or yesterday)
   let activeStreak = user.streak_days || 0;
-  if (user.streak_last_date) {
-    const lastDate = new Date(user.streak_last_date);
-    const today = new Date(new Date().toISOString().slice(0, 10));
-    const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+  const lastDateStr = toDateString(user.streak_last_date);
+  if (lastDateStr) {
+    const today = new Date().toISOString().slice(0, 10);
+    const lastDate = new Date(lastDateStr + 'T00:00:00Z');
+    const todayDate = new Date(today + 'T00:00:00Z');
+    const diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
     if (diffDays > 1) activeStreak = 0; // Streak expired
   }
 
@@ -421,9 +442,7 @@ async function generateSeasonRewards(seasonNum, winner) {
       const rank = i + 1;
       const isTopPercent = rank <= topTenCutoff;
 
-      // Minimum grade required: Flamme/Braise (100K) to receive rewards
-      const minGrade = side === 'on' ? 'Flamme' : 'Braise';
-      const qualifies = ['Flamme', 'Braise', 'Étoile', 'Ombre', 'Nova', 'Abîme', 'Cosmos', 'Néant'].includes(grade);
+      const qualifies = gradeQualifiesForReward(grade, side);
 
       let won = false;
       let prestigeBonus = 0;

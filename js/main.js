@@ -223,8 +223,10 @@ var mpOverlaySeason = document.getElementById('mp-overlay-season');
 var mpOverlayPlayer = document.getElementById('mp-overlay-player');
 var mpOverlayPlayerContrib = document.getElementById('mp-overlay-player-contrib');
 var mpOverlayPlayerStreak = document.getElementById('mp-overlay-player-streak');
+var mpOverlayPlayerPrestige = document.getElementById('mp-overlay-player-prestige');
 var mpOverlayRateBtns = document.querySelectorAll('.mp-rate-btn');
 var mpOverlayLeaderboardBtn = document.getElementById('mp-overlay-leaderboard-btn');
+var mpBalanceGrade = document.getElementById('mp-balance-grade');
 
 // Leaderboard DOM
 var mpLeaderboard = document.getElementById('mp-leaderboard');
@@ -336,6 +338,15 @@ function updateMultiplayerUI(mpState) {
       mpOverlayPlayerStreak.textContent = '';
     }
 
+    // Prestige bonus display
+    if (mpState.profile.mpPrestigeBonus > 0) {
+      mpOverlayPlayerPrestige.textContent =
+        'Bonus prestige : +' + mpState.profile.mpPrestigeBonus.toFixed(2) + ' (saisons passées)';
+      mpOverlayPlayerPrestige.classList.remove('hidden');
+    } else {
+      mpOverlayPlayerPrestige.classList.add('hidden');
+    }
+
     // Update rate buttons
     updateRateButtons(mpState.contributionRate);
 
@@ -345,6 +356,14 @@ function updateMultiplayerUI(mpState) {
     }
   } else {
     mpOverlayPlayer.classList.add('hidden');
+  }
+
+  // Grade badge on balance indicator
+  if (mpState.profile && mpState.profile.grade && mpState.profile.grade !== 'none') {
+    mpBalanceGrade.textContent = mpState.profile.grade;
+    mpBalanceGrade.classList.remove('hidden');
+  } else {
+    mpBalanceGrade.classList.add('hidden');
   }
 }
 
@@ -442,7 +461,9 @@ mpLeaderboardTabs.forEach(function (tab) {
   });
 });
 
-function fetchLeaderboard() {
+function fetchLeaderboard(retries) {
+  if (retries === undefined) retries = 2;
+  mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Chargement\u2026</div>';
   fetch('/api/leaderboard')
     .then(function (res) {
       return res.json();
@@ -453,7 +474,14 @@ function fetchLeaderboard() {
       renderLeaderboard();
     })
     .catch(function () {
-      mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Indisponible</div>';
+      if (retries > 0) {
+        _st(function () {
+          fetchLeaderboard(retries - 1);
+        }, 2000);
+      } else {
+        mpLeaderboardList.innerHTML =
+          '<div style="opacity:0.3;text-align:center;padding:20px;">Indisponible — réessayez plus tard</div>';
+      }
     });
 }
 

@@ -1,7 +1,7 @@
 // === SeasonEnd — Season transition cinematic and reward claim ===
 'use strict';
 
-import { gameMode, setMpPrestigeBonus } from './state.js';
+import { shared, setMpPrestigeBonus } from './state.js';
 import { _st, formatNumber } from './utils.js';
 import { mp, claimReward } from './multiplayer.js';
 
@@ -42,7 +42,6 @@ export function showSeasonEnd(reward) {
   grabDOM();
   if (!overlay) return;
 
-  var isOff = gameMode === 'off';
   var winnerLabel = reward.winner === 'light' ? 'La Lumière' : reward.winner === 'dark' ? "L'Ombre" : 'Égalité';
 
   title.textContent = 'Saison ' + reward.season + ' terminée';
@@ -104,12 +103,16 @@ export function showSeasonEnd(reward) {
     dismissSeasonEnd();
   };
 
+  // Pause game while showing
+  shared.seasonEndActive = true;
+
   // Show
   overlay.classList.remove('hidden');
 }
 
 function dismissSeasonEnd() {
   if (!overlay) return;
+  shared.seasonEndActive = false;
   overlay.classList.add('fade-out');
   _st(function () {
     overlay.classList.add('hidden');
@@ -144,5 +147,6 @@ export function showSeasonEndBroadcast(data) {
     dismissSeasonEnd();
   };
 
+  shared.seasonEndActive = true;
   overlay.classList.remove('hidden');
 }

@@ -93,6 +93,7 @@ export const shared = {
   adminMode: false,
   pendingReward: false,
   acPenaltyCount: 0,
+  seasonEndActive: false,
 };
 
 // --- Utility ---

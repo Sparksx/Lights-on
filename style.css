@@ -1133,6 +1133,24 @@ body.mode-off #mp-balance:hover #mp-balance-circle {
   border-color: rgba(0, 0, 0, 0.8);
 }
 
+/* Grade badge next to balance indicator */
+#mp-balance-grade {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+body.mode-off #mp-balance-grade {
+  color: rgba(0, 0, 0, 0.5);
+}
+
 /* === MULTIPLAYER OVERLAY === */
 #mp-overlay {
   position: fixed;
@@ -1621,6 +1639,18 @@ body.mode-off #mp-overlay-player-contrib {
 }
 
 body.mode-off #mp-overlay-player-streak {
+  color: #000;
+}
+
+#mp-overlay-player-prestige {
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  opacity: 0.4;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+body.mode-off #mp-overlay-player-prestige {
   color: #000;
 }
 
