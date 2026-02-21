@@ -1095,6 +1095,22 @@ body.mode-off #reset-btn.confirming {
   opacity: 1;
 }
 
+#mp-balance.disconnected #mp-balance-pip {
+  opacity: 1;
+  background: rgba(255, 100, 100, 0.7);
+  animation: pip-blink 2s ease-in-out infinite;
+}
+
+@keyframes pip-blink {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes balance-breathe {
   0%,
   100% {
@@ -1115,6 +1131,24 @@ body.mode-off #mp-balance-circle {
 
 body.mode-off #mp-balance:hover #mp-balance-circle {
   border-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Grade badge next to balance indicator */
+#mp-balance-grade {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+body.mode-off #mp-balance-grade {
+  color: rgba(0, 0, 0, 0.5);
 }
 
 /* === MULTIPLAYER OVERLAY === */
@@ -1608,6 +1642,18 @@ body.mode-off #mp-overlay-player-streak {
   color: #000;
 }
 
+#mp-overlay-player-prestige {
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  opacity: 0.4;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+body.mode-off #mp-overlay-player-prestige {
+  color: #000;
+}
+
 /* Contribution rate selector */
 #mp-overlay-rate {
   margin-top: 12px;
@@ -2067,5 +2113,101 @@ body.mode-off #season-end-continue {
 body.mode-off #season-end-claim:hover,
 body.mode-off #season-end-continue:hover {
   border-color: rgba(0, 0, 0, 0.8);
+  color: #000;
+}
+
+/* === STREAK LOSS TOAST === */
+.mp-streak-toast {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.85);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 10px 20px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  border-radius: 4px;
+  animation: toast-in 0.4s ease;
+  white-space: nowrap;
+}
+
+.mp-streak-toast.fade-out {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+body.mode-off .mp-streak-toast {
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(0, 0, 0, 0.8);
+  border-color: rgba(200, 50, 50, 0.4);
+}
+
+/* === OVERLAY LOGIN PROMPT (unauthenticated) === */
+#mp-overlay-login {
+  text-align: center;
+  margin-top: 8px;
+}
+
+#mp-overlay-login-text {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-bottom: 10px;
+}
+
+#mp-overlay-login-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.mp-login-btn {
+  display: inline-block;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 8px 18px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.mp-login-btn:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+body.mode-off .mp-login-btn {
+  border-color: rgba(0, 0, 0, 0.3);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body.mode-off .mp-login-btn:hover {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: #000;
+}
+
+body.mode-off #mp-overlay-login-text {
   color: #000;
 }

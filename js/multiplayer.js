@@ -48,6 +48,12 @@ export function onRewardReceived(fn) {
   rewardListeners.push(fn);
 }
 
+// --- Streak change callbacks ---
+const streakChangeListeners = [];
+export function onStreakChange(fn) {
+  streakChangeListeners.push(fn);
+}
+
 // --- Auth ---
 export async function fetchUser() {
   try {
@@ -109,13 +115,39 @@ export async function fetchRewards() {
   } catch (_) {}
 }
 
+// --- Offline contribution queue (localStorage backup) ---
+const OFFLINE_QUEUE_KEY = 'light-mp-offline-queue';
+
+function loadOfflineQueue() {
+  try {
+    var val = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    if (val) {
+      var amount = Number(val);
+      if (amount > 0) mp.pendingLumens += amount;
+      localStorage.removeItem(OFFLINE_QUEUE_KEY);
+    }
+  } catch (_) {}
+}
+
+function saveOfflineQueue() {
+  try {
+    if (mp.pendingLumens > 0) {
+      localStorage.setItem(OFFLINE_QUEUE_KEY, String(mp.pendingLumens));
+    }
+  } catch (_) {}
+}
+
 // --- Set contribution rate ---
 export function setContributionRate(rate) {
   const valid = [10, 25, 50, 100];
   if (!valid.includes(rate)) return;
   mp.contributionRate = rate;
   if (mp.socket && mp.connected) {
-    mp.socket.emit('set-contribution-rate', { rate });
+    mp.socket.emit('set-contribution-rate', { rate }, function (ack) {
+      if (ack && ack.error) {
+        console.warn('[multiplayer] Failed to save contribution rate:', ack.error);
+      }
+    });
   }
 }
 
@@ -129,6 +161,8 @@ export function connectSocket() {
 
   socket.on('connect', () => {
     mp.connected = true;
+    // Restore any offline-queued contributions
+    loadOfflineQueue();
     // Join with current game mode
     if (gameMode) {
       socket.emit('join', { side: gameMode });
@@ -138,6 +172,8 @@ export function connectSocket() {
 
   socket.on('disconnect', () => {
     mp.connected = false;
+    // Save any pending contributions to localStorage so they survive page close
+    saveOfflineQueue();
     notify();
   });
 
@@ -157,8 +193,13 @@ export function connectSocket() {
   // Server sends player profile updates (after contributions)
   socket.on('profile', (data) => {
     if (data) {
+      var oldStreak = mp.profile ? mp.profile.streakDays : null;
       mp.profile = data;
       mp.contributionRate = data.contributionRate || mp.contributionRate;
+      // Detect streak reset (was > 1, now reset to 1 or 0)
+      if (oldStreak !== null && oldStreak > 1 && data.streakDays <= 1) {
+        streakChangeListeners.forEach((fn) => fn({ oldStreak, newStreak: data.streakDays, reset: true }));
+      }
       notify();
     }
   });
@@ -205,6 +246,13 @@ function flushLumens() {
       mp.socket.emit('contribute', { amount: contributed });
     }
     mp.pendingLumens = 0;
+    // Clear offline queue since we flushed successfully
+    try {
+      localStorage.removeItem(OFFLINE_QUEUE_KEY);
+    } catch (_) {}
+  } else if (mp.pendingLumens > 0) {
+    // Socket disconnected or not logged in — persist queue for later
+    saveOfflineQueue();
   }
 }
 
@@ -230,6 +278,8 @@ export async function initMultiplayer() {
     await fetchProfile();
     await fetchRewards();
   }
+  // Restore any queued offline contributions
+  loadOfflineQueue();
   connectSocket();
   setInterval(flushLumens, REPORT_INTERVAL);
 }

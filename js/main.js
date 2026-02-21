@@ -39,8 +39,10 @@ import {
   onMultiplayerUpdate,
   onSeasonEnd,
   onRewardReceived,
+  onStreakChange,
   notifySideChange,
   setContributionRate,
+  reportLumens,
 } from './multiplayer.js';
 import { setServerAvailable, isOnboardingDone, isMultiplayerActive, checkOnboarding } from './onboarding.js';
 import { showSeasonEnd, showSeasonEndBroadcast } from './season-end.js';
@@ -84,6 +86,8 @@ function startGame(mode) {
     gameArea.classList.remove('hidden');
     resizeCanvas();
     initGame();
+    // Notify server of side choice after game is initialized
+    notifySideChange(mode);
   }, 700);
 }
 
@@ -112,6 +116,7 @@ function initGame() {
         if (offlineGain > 0) {
           state.lumens += offlineGain;
           state.totalLumens += offlineGain;
+          reportLumens(offlineGain);
           updateUI();
           var offlinePopup = document.getElementById('offline-popup');
           var offlineText = document.getElementById('offline-text');
@@ -172,11 +177,9 @@ function initGame() {
 // --- Mode selection ---
 modeOn.addEventListener('click', function () {
   startGame('on');
-  notifySideChange('on');
 });
 modeOff.addEventListener('click', function () {
   startGame('off');
-  notifySideChange('off');
 });
 
 // Check for saved game — skip landing if save exists
@@ -220,8 +223,11 @@ var mpOverlaySeason = document.getElementById('mp-overlay-season');
 var mpOverlayPlayer = document.getElementById('mp-overlay-player');
 var mpOverlayPlayerContrib = document.getElementById('mp-overlay-player-contrib');
 var mpOverlayPlayerStreak = document.getElementById('mp-overlay-player-streak');
+var mpOverlayPlayerPrestige = document.getElementById('mp-overlay-player-prestige');
 var mpOverlayRateBtns = document.querySelectorAll('.mp-rate-btn');
 var mpOverlayLeaderboardBtn = document.getElementById('mp-overlay-leaderboard-btn');
+var mpBalanceGrade = document.getElementById('mp-balance-grade');
+var mpOverlayLogin = document.getElementById('mp-overlay-login');
 
 // Leaderboard DOM
 var mpLeaderboard = document.getElementById('mp-leaderboard');
@@ -231,14 +237,6 @@ var mpLeaderboardTitle = document.getElementById('mp-leaderboard-title');
 var mpLeaderboardTabs = document.querySelectorAll('.mp-lb-tab');
 var mpLeaderboardList = document.getElementById('mp-leaderboard-list');
 var mpLeaderboardPlayerRank = document.getElementById('mp-leaderboard-player-rank');
-
-function formatShort(n) {
-  if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return String(n);
-}
 
 // --- Update balance indicator circle proportions ---
 function updateBalanceCircle(light, dark) {
@@ -256,10 +254,16 @@ function updateBalanceCircle(light, dark) {
 
 // --- Update the full overlay with current multiplayer state ---
 function updateMultiplayerUI(mpState) {
-  // Balance indicator: only show if onboarding is done and user connected
-  if (isMultiplayerActive() && mpState.connected) {
+  // Balance indicator: only show if onboarding is done
+  if (isMultiplayerActive()) {
     mpBalance.classList.remove('hidden');
-    mpBalance.classList.add('online');
+    if (mpState.connected) {
+      mpBalance.classList.add('online');
+      mpBalance.classList.remove('disconnected');
+    } else {
+      mpBalance.classList.remove('online');
+      mpBalance.classList.add('disconnected');
+    }
   }
 
   // Update balance proportions
@@ -277,10 +281,12 @@ function updateMultiplayerUI(mpState) {
       mpOverlayAvatar.style.display = 'none';
     }
     mpOverlayLogout.style.display = '';
+    mpOverlayLogin.classList.add('hidden');
   } else {
     mpOverlayName.textContent = '';
     mpOverlayAvatar.style.display = 'none';
     mpOverlayLogout.style.display = 'none';
+    mpOverlayLogin.classList.remove('hidden');
   }
 
   // Grade badge
@@ -300,8 +306,8 @@ function updateMultiplayerUI(mpState) {
     mpOverlayLightBar.style.width = '50%';
     mpOverlayDarkBar.style.width = '50%';
   }
-  mpOverlayLightTotal.textContent = formatShort(light);
-  mpOverlayDarkTotal.textContent = formatShort(dark);
+  mpOverlayLightTotal.textContent = formatNumber(light);
+  mpOverlayDarkTotal.textContent = formatNumber(dark);
   mpOverlayOnline.textContent = mpState.online.total + ' en ligne';
 
   // Season info
@@ -323,7 +329,7 @@ function updateMultiplayerUI(mpState) {
   if (mpState.user && mpState.profile) {
     mpOverlayPlayer.classList.remove('hidden');
     mpOverlayPlayerContrib.textContent =
-      formatShort(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
+      formatNumber(mpState.profile.contribution) + (gameMode === 'off' ? ' ob' : ' lm');
 
     if (mpState.profile.streakDays > 0) {
       var streakText = mpState.profile.streakDays + 'j consécutifs';
@@ -335,6 +341,15 @@ function updateMultiplayerUI(mpState) {
       mpOverlayPlayerStreak.textContent = '';
     }
 
+    // Prestige bonus display
+    if (mpState.profile.mpPrestigeBonus > 0) {
+      mpOverlayPlayerPrestige.textContent =
+        'Bonus prestige : +' + mpState.profile.mpPrestigeBonus.toFixed(2) + ' (saisons passées)';
+      mpOverlayPlayerPrestige.classList.remove('hidden');
+    } else {
+      mpOverlayPlayerPrestige.classList.add('hidden');
+    }
+
     // Update rate buttons
     updateRateButtons(mpState.contributionRate);
 
@@ -344,6 +359,14 @@ function updateMultiplayerUI(mpState) {
     }
   } else {
     mpOverlayPlayer.classList.add('hidden');
+  }
+
+  // Grade badge on balance indicator
+  if (mpState.profile && mpState.profile.grade && mpState.profile.grade !== 'none') {
+    mpBalanceGrade.textContent = mpState.profile.grade;
+    mpBalanceGrade.classList.remove('hidden');
+  } else {
+    mpBalanceGrade.classList.add('hidden');
   }
 }
 
@@ -441,7 +464,9 @@ mpLeaderboardTabs.forEach(function (tab) {
   });
 });
 
-function fetchLeaderboard() {
+function fetchLeaderboard(retries) {
+  if (retries === undefined) retries = 2;
+  mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Chargement\u2026</div>';
   fetch('/api/leaderboard')
     .then(function (res) {
       return res.json();
@@ -452,7 +477,14 @@ function fetchLeaderboard() {
       renderLeaderboard();
     })
     .catch(function () {
-      mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Indisponible</div>';
+      if (retries > 0) {
+        _st(function () {
+          fetchLeaderboard(retries - 1);
+        }, 2000);
+      } else {
+        mpLeaderboardList.innerHTML =
+          '<div style="opacity:0.3;text-align:center;padding:20px;">Indisponible — réessayez plus tard</div>';
+      }
     });
 }
 
@@ -479,7 +511,7 @@ function renderLeaderboard() {
 
       var totalEl = document.createElement('span');
       totalEl.className = 'mp-lb-total';
-      totalEl.textContent = formatShort(entry.total);
+      totalEl.textContent = formatNumber(entry.total);
 
       el.appendChild(rankEl);
 
@@ -500,7 +532,7 @@ function renderLeaderboard() {
   // Player's own rank
   if (leaderboardData.playerRank && leaderboardData.playerRank.side === currentLeaderboardSide) {
     mpLeaderboardPlayerRank.textContent =
-      'Votre rang : #' + leaderboardData.playerRank.rank + ' (' + formatShort(leaderboardData.playerRank.total) + ')';
+      'Votre rang : #' + leaderboardData.playerRank.rank + ' (' + formatNumber(leaderboardData.playerRank.total) + ')';
   } else {
     mpLeaderboardPlayerRank.textContent = '';
   }
@@ -517,6 +549,22 @@ onRewardReceived(function (rewards) {
     // Show the most recent unclaimed reward
     showSeasonEnd(rewards[0]);
   }
+});
+
+// --- Streak loss notification ---
+onStreakChange(function (info) {
+  if (!info.reset) return;
+  // Show a brief toast notification about streak loss
+  var toast = document.createElement('div');
+  toast.className = 'mp-streak-toast';
+  toast.textContent = 'Série perdue (' + info.oldStreak + 'j) — multiplieur réinitialisé';
+  document.body.appendChild(toast);
+  _st(function () {
+    toast.classList.add('fade-out');
+    _st(function () {
+      toast.remove();
+    }, 600);
+  }, 4000);
 });
 
 // --- Onboarding completion callback ---

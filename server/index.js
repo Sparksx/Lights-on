@@ -165,7 +165,13 @@ app.use(express.static(path.join(__dirname, '..')));
 io.engine.use(sessionMiddleware);
 
 // Track connected players per side
-const players = new Map(); // socketId -> { userId, side, displayName }
+const players = new Map(); // socketId -> { userId, side, displayName, lastContribTime, contribCount }
+
+// Anti-cheat: max lumens per 10-second report interval.
+// Game max passive is ~100M/s (endgame with prestige), report interval = 10s → ~1B max.
+// We add generous margin for click bursts and combo multipliers.
+const MAX_CONTRIBUTION_PER_REPORT = 5_000_000_000; // 5 billion
+const MIN_REPORT_INTERVAL_MS = 8_000; // reports come every 10s, allow 8s minimum
 
 function countBySide(side) {
   let count = 0;
@@ -218,10 +224,20 @@ io.on('connection', (socket) => {
   socket.on('contribute', async (data) => {
     if (!user?.id) return; // Must be logged in
     const amount = Number(data?.amount) || 0;
-    if (amount <= 0) return;
+    if (amount <= 0 || !Number.isFinite(amount)) return;
 
     const player = players.get(socket.id);
     if (!player) return;
+
+    // Anti-cheat: cap contribution amount
+    const clampedAmount = Math.min(amount, MAX_CONTRIBUTION_PER_REPORT);
+
+    // Anti-cheat: rate-limit reports
+    const now = Date.now();
+    if (player.lastContribTime && now - player.lastContribTime < MIN_REPORT_INTERVAL_MS) {
+      return; // Too fast, ignore
+    }
+    player.lastContribTime = now;
 
     try {
       // Update streak
@@ -229,12 +245,15 @@ io.on('connection', (socket) => {
       const streakMult = streakDays > 0 ? getStreakMultiplier(streakDays) : 1.0;
 
       // Apply streak multiplier to contribution
-      const boostedAmount = Math.floor(amount * streakMult);
+      const boostedAmount = Math.floor(clampedAmount * streakMult);
+
+      const season = await getCurrentSeason();
+      if (!season) return;
 
       const totals = await addToCosmicWar(player.side, boostedAmount);
       if (totals) {
-        // Record individual contribution
-        await recordContribution(user.id, player.side, boostedAmount);
+        // Record contribution (upsert — aggregates per user+season+side)
+        await recordContribution(user.id, season.season, player.side, boostedAmount);
         // Broadcast updated war state to all
         io.emit('cosmic-war', {
           totalLight: Number(totals.total_light),
@@ -250,11 +269,20 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Player changes contribution rate
-  socket.on('set-contribution-rate', async (data) => {
-    if (!user?.id) return;
-    const rate = Number(data?.rate);
-    await setPlayerContributionRate(user.id, rate);
+  // Player changes contribution rate (with acknowledgment)
+  socket.on('set-contribution-rate', async (data, ack) => {
+    if (!user?.id) {
+      if (typeof ack === 'function') ack({ error: 'Not authenticated' });
+      return;
+    }
+    try {
+      const rate = Number(data?.rate);
+      const success = await setPlayerContributionRate(user.id, rate);
+      if (typeof ack === 'function') ack(success ? { ok: true } : { error: 'Invalid rate' });
+    } catch (err) {
+      console.error('[socket] set-contribution-rate error:', err);
+      if (typeof ack === 'function') ack({ error: 'Server error' });
+    }
   });
 
   // Player claims a season reward

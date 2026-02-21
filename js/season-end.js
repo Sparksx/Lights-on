@@ -1,8 +1,8 @@
 // === SeasonEnd — Season transition cinematic and reward claim ===
 'use strict';
 
-import { gameMode, setMpPrestigeBonus } from './state.js';
-import { _st } from './utils.js';
+import { shared, setMpPrestigeBonus } from './state.js';
+import { _st, formatNumber } from './utils.js';
 import { mp, claimReward } from './multiplayer.js';
 
 // --- DOM refs (lazy) ---
@@ -34,14 +34,6 @@ function grabDOM() {
   continueBtn = document.getElementById('season-end-continue');
 }
 
-function formatShort(n) {
-  if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return String(n);
-}
-
 /**
  * Show the season end overlay with reward data.
  * @param {object} reward - A season_rewards row joined with cosmic_war data
@@ -50,7 +42,6 @@ export function showSeasonEnd(reward) {
   grabDOM();
   if (!overlay) return;
 
-  var isOff = gameMode === 'off';
   var winnerLabel = reward.winner === 'light' ? 'La Lumière' : reward.winner === 'dark' ? "L'Ombre" : 'Égalité';
 
   title.textContent = 'Saison ' + reward.season + ' terminée';
@@ -63,8 +54,8 @@ export function showSeasonEnd(reward) {
     result.textContent = winnerLabel + ' a triomphé.';
   }
 
-  statsLight.textContent = formatShort(Number(reward.total_light)) + ' lm';
-  statsDark.textContent = formatShort(Number(reward.total_dark)) + ' ob';
+  statsLight.textContent = formatNumber(Number(reward.total_light)) + ' lm';
+  statsDark.textContent = formatNumber(Number(reward.total_dark)) + ' ob';
 
   // Player stats
   if (reward.grade && reward.grade !== 'none') {
@@ -73,7 +64,7 @@ export function showSeasonEnd(reward) {
     playerGrade.textContent = '';
   }
 
-  playerContrib.textContent = 'Contribution : ' + formatShort(Number(reward.contribution_total));
+  playerContrib.textContent = 'Contribution : ' + formatNumber(Number(reward.contribution_total));
 
   if (reward.rank_in_team) {
     playerRank.textContent = 'Rang : #' + reward.rank_in_team + (reward.top_percent ? ' (Top 10%)' : '');
@@ -112,12 +103,16 @@ export function showSeasonEnd(reward) {
     dismissSeasonEnd();
   };
 
+  // Pause game while showing
+  shared.seasonEndActive = true;
+
   // Show
   overlay.classList.remove('hidden');
 }
 
 function dismissSeasonEnd() {
   if (!overlay) return;
+  shared.seasonEndActive = false;
   overlay.classList.add('fade-out');
   _st(function () {
     overlay.classList.add('hidden');
@@ -137,8 +132,8 @@ export function showSeasonEndBroadcast(data) {
   title.textContent = 'Saison ' + data.endedSeason + ' terminée';
   result.textContent = winnerLabel + ' a triomphé\u00a0!';
 
-  statsLight.textContent = formatShort(data.totalLight) + ' lm';
-  statsDark.textContent = formatShort(data.totalDark) + ' ob';
+  statsLight.textContent = formatNumber(data.totalLight) + ' lm';
+  statsDark.textContent = formatNumber(data.totalDark) + ' ob';
 
   playerGrade.textContent = '';
   playerContrib.textContent = '';
@@ -152,5 +147,6 @@ export function showSeasonEndBroadcast(data) {
     dismissSeasonEnd();
   };
 
+  shared.seasonEndActive = true;
   overlay.classList.remove('hidden');
 }
