@@ -19,31 +19,21 @@ async function initDB() {
 }
 
 /**
- * Find or create a user from an OAuth profile.
- * @param {string} provider - 'google' or 'discord'
- * @param {object} profile - { id, displayName, avatar }
+ * Find or create a player from their shared neufmois.app (Supabase) account.
+ * Refreshes display name / avatar and last_seen_at on every call.
+ * @param {string} supabaseId - verified JWT `sub` (UUID)
+ * @param {object} profile - { displayName, avatar }
  * @returns {object} user row
  */
-async function findOrCreateUser(provider, profile) {
-  const idColumn = provider === 'google' ? 'google_id' : 'discord_id';
-
-  // Try to find existing user
-  const existing = await pool.query(`SELECT * FROM users WHERE ${idColumn} = $1`, [profile.id]);
-
-  if (existing.rows.length > 0) {
-    // Update last seen
-    await pool.query(`UPDATE users SET last_seen_at = NOW(), display_name = $1, avatar_url = $2 WHERE id = $3`, [
-      profile.displayName,
-      profile.avatar,
-      existing.rows[0].id,
-    ]);
-    return existing.rows[0];
-  }
-
-  // Create new user
+async function findOrCreateUserBySupabaseId(supabaseId, profile) {
   const result = await pool.query(
-    `INSERT INTO users (${idColumn}, display_name, avatar_url) VALUES ($1, $2, $3) RETURNING *`,
-    [profile.id, profile.displayName, profile.avatar],
+    `INSERT INTO users (supabase_id, display_name, avatar_url) VALUES ($1, $2, $3)
+     ON CONFLICT (supabase_id)
+     DO UPDATE SET display_name = EXCLUDED.display_name,
+                   avatar_url = EXCLUDED.avatar_url,
+                   last_seen_at = NOW()
+     RETURNING *`,
+    [supabaseId, profile.displayName, profile.avatar],
   );
   return result.rows[0];
 }
@@ -542,7 +532,7 @@ async function getSeasonInfo() {
 module.exports = {
   pool,
   initDB,
-  findOrCreateUser,
+  findOrCreateUserBySupabaseId,
   getCurrentSeason,
   addToCosmicWar,
   recordContribution,

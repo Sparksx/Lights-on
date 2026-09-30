@@ -3,7 +3,7 @@
 
 import { gameMode, state } from './state.js';
 import { _st } from './utils.js';
-import { mp } from './multiplayer.js';
+import { mp, login } from './multiplayer.js';
 
 // --- Constants ---
 var ONBOARDING_THRESHOLD = 60000; // totalLumens needed to trigger
@@ -30,7 +30,7 @@ function grabDOM() {
 // --- Public: mark server as reachable ---
 export function setServerAvailable(val) {
   serverAvailable = val;
-  // If user already logged in (returning from OAuth), mark onboarding done
+  // If user already logged in (returning from the hub login), mark onboarding done
   if (val && mp.user) {
     markOnboardingDone('connected');
   }
@@ -92,20 +92,16 @@ function showOnboarding() {
   }
 
   // Wire up buttons
-  var googleBtn = document.getElementById('mp-onboarding-google');
-  var discordBtn = document.getElementById('mp-onboarding-discord');
+  var loginBtn = document.getElementById('mp-onboarding-login');
   var soloBtn = document.getElementById('mp-onboarding-solo');
 
-  googleBtn.addEventListener('click', function (e) {
+  loginBtn.addEventListener('click', function (e) {
     e.stopPropagation();
     markOnboardingDone('connected');
-    window.location.href = '/auth/google';
-  });
-
-  discordBtn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    markOnboardingDone('connected');
-    window.location.href = '/auth/discord';
+    // Redirects to the neufmois.app hub; if unreachable, just reveal the multiplayer UI
+    login().then(function (redirected) {
+      if (!redirected) finishOnboarding('connected');
+    });
   });
 
   soloBtn.addEventListener('click', function (e) {
@@ -136,7 +132,10 @@ function showOnboarding() {
 function dismissOnboarding(choice) {
   if (onboardingDismissed) return;
   markOnboardingDone(choice);
+  finishOnboarding(choice);
+}
 
+function finishOnboarding(choice) {
   overlay.classList.add('fade-out');
   _st(function () {
     overlay.classList.add('hidden');

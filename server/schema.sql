@@ -1,16 +1,10 @@
 -- Lights-on Multiplayer Schema
 
--- Session store for express-session (connect-pg-simple)
-CREATE TABLE IF NOT EXISTS "session" (
-  "sid" VARCHAR NOT NULL PRIMARY KEY,
-  "sess" JSON NOT NULL,
-  "expire" TIMESTAMP(6) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
-
--- Players
+-- Players (identified by their shared neufmois.app account: supabase_id = JWT `sub`)
+-- google_id / discord_id are legacy columns from the former Passport login (kept for existing rows)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  supabase_id UUID UNIQUE,
   google_id VARCHAR(255) UNIQUE,
   discord_id VARCHAR(255) UNIQUE,
   display_name VARCHAR(100) NOT NULL,
@@ -92,3 +86,7 @@ DO $$ BEGIN
   ALTER TABLE cosmic_war ADD CONSTRAINT cosmic_war_season_unique UNIQUE (season);
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
+
+-- Shared neufmois.app login: link players to their hub (Supabase) account.
+-- Idempotent; existing rows (legacy Google/Discord accounts) keep supabase_id = NULL.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS supabase_id UUID UNIQUE;

@@ -55,15 +55,14 @@
           <img id="mp-overlay-avatar" src="" alt="" />
           <span id="mp-overlay-name"></span>
           <span id="mp-overlay-grade"></span>
-          <button id="mp-overlay-logout">Déconnexion</button>
+          <button id="mp-overlay-logout">Se déconnecter</button>
         </div>
 
         <!-- Login prompt for unauthenticated players -->
         <div id="mp-overlay-login" class="hidden">
           <div id="mp-overlay-login-text">Connectez-vous pour contribuer</div>
           <div id="mp-overlay-login-btns">
-            <a href="/auth/google" class="mp-login-btn mp-login-google">Google</a>
-            <a href="/auth/discord" class="mp-login-btn mp-login-discord">Discord</a>
+            <button id="mp-overlay-login-btn" class="mp-login-btn">Se connecter</button>
           </div>
         </div>
 
@@ -151,8 +150,7 @@
       <div id="mp-onboarding-text1"></div>
       <div id="mp-onboarding-text2"></div>
       <div id="mp-onboarding-actions" class="hidden">
-        <button id="mp-onboarding-google" class="mp-onboarding-btn">Google</button>
-        <button id="mp-onboarding-discord" class="mp-onboarding-btn">Discord</button>
+        <button id="mp-onboarding-login" class="mp-onboarding-btn">Se connecter</button>
         <button id="mp-onboarding-solo" class="mp-onboarding-btn mp-solo-btn">Continuer seul</button>
       </div>
       <button id="mp-onboarding-skip" class="hidden">Passer ›</button>

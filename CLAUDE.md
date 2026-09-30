@@ -4,7 +4,7 @@
 
 **Light** is a progressive web app (PWA) incremental/clicker game with a philosophical dual-mode design. Players choose between "Lights ON" (bringing light to darkness) or "Lights OFF" (bringing darkness to light), then accumulate lumens (or "obscurs" in OFF mode) through clicking, rubbing/swiping, and upgrades to reach 1 trillion units and trigger a victory condition.
 
-The game includes a multiplayer "Cosmic War" feature where authenticated players contribute their earnings to a global light-vs-dark tally, tracked per season.
+The game includes a multiplayer "Cosmic War" feature where players logged in with their shared **neufmois.app** account contribute their earnings to a global light-vs-dark tally, tracked per season.
 
 - **Language**: French (all user-facing text is in French)
 - **Tech stack**: Vanilla HTML/CSS/JavaScript frontend (ES modules, Vite build) + Node.js/Express backend for multiplayer
@@ -18,7 +18,7 @@ The game includes a multiplayer "Cosmic War" feature where authenticated players
 /
 ├── index.html              # Entry point — HTML structure, PWA meta, script loading
 ├── style.css               # All styling (~1,340 lines)
-├── sw.js                   # Service Worker — network-first caching (v9)
+├── sw.js                   # Service Worker — network-first caching, same-origin only (v11)
 ├── manifest.json           # PWA manifest (standalone, portrait, black theme)
 ├── package.json            # Root package.json (scripts, devDependencies)
 ├── vite.config.js          # Vite build configuration
@@ -51,7 +51,8 @@ The game includes a multiplayer "Cosmic War" feature where authenticated players
 │   ├── game-loop.js        # requestAnimationFrame loop, passive income tick (~71 lines)
 │   ├── victory.js          # Light switch, sun/eclipse cinematic, prestige, restart (~222 lines)
 │   ├── intro.js            # New-game cinematic overlay (~34 lines)
-│   ├── multiplayer.js      # Socket.io client, auth, cosmic war state, lumen reporting (~114 lines)
+│   ├── multiplayer.js      # Socket.io client, auth state, cosmic war state, lumen reporting (~330 lines)
+│   ├── hub-auth.js         # Lazy, failure-safe wrapper around the neufmois.app hub login module (~100 lines)
 │   ├── onboarding.js       # Progressive multiplayer introduction at 60K lumens (~140 lines)
 │   └── effects/            # Visual effect systems
 │       ├── stars.js        # Star particles (~74 lines)
@@ -69,14 +70,16 @@ The game includes a multiplayer "Cosmic War" feature where authenticated players
 │   │   ├── state.test.js   # Tests for state.js
 │   │   ├── utils.test.js   # Tests for utils.js
 │   │   ├── save.test.js    # Tests for save.js
+│   │   ├── auth.test.js    # Tests for server/auth-utils.js + js/hub-auth.js helpers
 │   │   └── upgrades-data.test.js # Tests for upgrades-data.js
 │   └── e2e/                # Playwright E2E tests
 │       └── game.spec.js    # Core game flow tests
 └── server/                 # Backend for multiplayer features
     ├── index.js            # Express + Socket.io server, API routes (~159 lines)
-    ├── auth.js             # Passport.js OAuth (Google + Discord) (~104 lines)
+    ├── auth.js             # Shared neufmois.app login: Supabase JWT verification, Express/Socket.io middlewares, /auth/me
+    ├── auth-utils.js       # Pure auth helpers (token extraction, display name/avatar selection)
     ├── db.js               # PostgreSQL pool, schema init, queries (~100 lines)
-    ├── schema.sql          # Database schema (users, cosmic_war, contributions, session) (~47 lines)
+    ├── schema.sql          # Database schema (users, cosmic_war, contributions, season_rewards) (~47 lines)
     ├── package.json        # Server dependencies
     └── .env.example        # Required environment variables template
 ```
@@ -111,6 +114,7 @@ main.js (entry point)
 ├── victory.js        (switch, cinematic, prestige, restart)
 ├── intro.js          (new-game cinematic)
 ├── multiplayer.js    (socket.io, auth, cosmic war)
+│   └── hub-auth.js   (neufmois.app hub login module, loaded dynamically)
 └── onboarding.js     (multiplayer onboarding at 60K lumens)
 ```
 
@@ -124,8 +128,7 @@ main.js (entry point)
 
 - **Framework**: Express 4 + Socket.io 4
 - **Database**: PostgreSQL via `pg` driver
-- **Auth**: Passport.js with Google OAuth2 and Discord OAuth2 strategies
-- **Sessions**: `express-session` with `connect-pg-simple` (stored in PostgreSQL)
+- **Auth**: shared **neufmois.app** login (Supabase). No session, no cookie, no secret on this server — see "Authentication" below
 - **Static serving**: `express.static()` serves the entire project root as static files
 
 #### API endpoints
@@ -134,12 +137,22 @@ main.js (entry point)
 |----------|--------|---------|
 | `/api/cosmic-war` | GET | Current season totals (light vs dark) |
 | `/api/online` | GET | Connected player counts (total, light, dark) — also used as healthcheck |
-| `/auth/google` | GET | Initiate Google OAuth |
-| `/auth/google/callback` | GET | Google OAuth callback |
-| `/auth/discord` | GET | Initiate Discord OAuth |
-| `/auth/discord/callback` | GET | Discord OAuth callback |
-| `/auth/me` | GET | Current authenticated user (or null) |
-| `/auth/logout` | POST | Logout |
+| `/api/profile` | GET | Player's grade, streak, contribution rate (auth) |
+| `/api/contribution-rate` | POST | Set contribution rate (auth) |
+| `/api/leaderboard` | GET | Season top 20 per side + own rank if authenticated |
+| `/api/rewards` | GET | Unclaimed season rewards (auth) |
+| `/api/rewards/claim` | POST | Claim a season reward (auth) |
+| `/auth/me` | GET | Current player `{ id, displayName, avatar }` from the bearer token (or `null`) |
+
+"(auth)" routes read `req.user`, resolved from `Authorization: Bearer <hub access token>` by `authMiddleware` (mounted on `/api`). Login/logout happen on the hub, not on this server.
+
+#### Authentication (shared neufmois.app login)
+
+- **Client**: `js/hub-auth.js` dynamically imports `https://neufmois.app/hub/auth.js` (`getAccessToken`, `login`, `logout`, `onAuthChange`…). Every failure (offline, timeout, blocked) resolves to "logged out" — the game must keep working without it.
+- The hub session is a cookie on `.neufmois.app`, so login only works when the game is served from `*.neufmois.app` (production: `https://light.neufmois.app`). On `localhost` / `*.railway.app` players simply appear logged out.
+- The client sends the access token as `Authorization: Bearer` on `/auth/me` and `/api/*` (`authFetch()` in `multiplayer.js`) and in the Socket.io handshake (`io({ auth: cb => cb({ token }) })`, re-read on every reconnection).
+- **Server** (`server/auth.js`): verifies the JWT with `jose` against the hub Supabase JWKS (`issuer` = `https://cvjkclypgvnrblmnxita.supabase.co/auth/v1`, `audience` = `authenticated`). `jose` is ESM-only, so it is loaded with a dynamic `import()`. The trusted display name comes from the player's own hub `profiles` row (fetched with their token + the public publishable key). `sub` is mapped to `users.supabase_id` (find-or-create, cached 5 min per player).
+- Invalid/missing tokens never reject a request or socket: the player is just anonymous (`req.user` / `socket.data.user` = `null`).
 
 #### Socket.io events
 
@@ -153,8 +166,7 @@ main.js (entry point)
 
 #### Database schema
 
-- **`session`** — Express session store (connect-pg-simple)
-- **`users`** — Player accounts (UUID PK, google_id, discord_id, display_name, avatar_url)
+- **`users`** — Player accounts (UUID PK, `supabase_id` = hub account id, display_name, avatar_url; `google_id`/`discord_id` are legacy columns from the former Passport login)
 - **`cosmic_war`** — Season-based light vs dark totals (total_light, total_dark bigint)
 - **`contributions`** — Per-player lumen contributions per season
 
@@ -164,14 +176,9 @@ main.js (entry point)
 |----------|----------|-------------|
 | `PORT` | No | Server port (default 3000) |
 | `NODE_ENV` | No | `development` or `production` |
-| `SESSION_SECRET` | Yes | Session encryption secret |
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
-| `DISCORD_CLIENT_ID` | No | Discord OAuth client ID |
-| `DISCORD_CLIENT_SECRET` | No | Discord OAuth client secret |
 
-OAuth providers are optional — the server starts without them but logs a warning. The game works fully offline without the server (multiplayer features stay hidden).
+Login needs no environment variable (the hub's JWKS and publishable key are public). The game works fully offline without the server (multiplayer features stay hidden).
 
 ### Upgrade types
 
@@ -205,10 +212,11 @@ After reaching victory, players can "Cross Over" to switch modes with a permanen
 
 ### Service Worker (`sw.js`)
 
-- Cache name: `lights-on-v9`
+- Cache name: `lights-on-v11`
 - Strategy: Network-first with cache fallback
 - Caches all static assets (HTML, CSS, all JS modules, icons, manifest)
 - Excludes `/api/`, `/auth/`, `/socket.io/` from caching
+- Ignores cross-origin requests (e.g. the neufmois.app hub login module and Supabase calls) so they always hit the network
 - Auto-updates: Client checks for SW updates every 60 seconds
 - `skipWaiting()` + `clients.claim()` ensures immediate activation
 
@@ -229,7 +237,7 @@ Multiplayer features will be hidden if the backend is not running.
 
 ### Running with multiplayer
 
-Requires PostgreSQL and OAuth credentials:
+Requires PostgreSQL (login itself only works on a `*.neufmois.app` domain; locally you play as an anonymous player):
 
 ```bash
 # 1. Set up PostgreSQL and create a database
@@ -321,7 +329,7 @@ Vite bundles all JS modules, CSS, and assets into `dist/`. The server still serv
 
 - **Railway**: Configured via `railway.json` — uses Railpack builder, starts `node server/index.js`, healthcheck at `/api/online`
 - **Heroku**: Configured via `Procfile` — `web: cd server && node index.js`
-- Update the `CACHE_NAME` version string in `sw.js` when making changes (currently `'lights-on-v9'`)
+- Update the `CACHE_NAME` version string in `sw.js` when making changes (currently `'lights-on-v11'`)
 - Update the `ASSETS` array in `sw.js` if new files are added
 - The Service Worker's `skipWaiting()` + `clients.claim()` ensures immediate activation
 - The client auto-reloads when a new SW takes control
@@ -390,7 +398,7 @@ Vite bundles all JS modules, CSS, and assets into `dist/`. The server still serv
 
 13. **Prestige state** is stored separately from game saves. The `state.js` module handles prestige loading on import (runs `loadPrestige()` immediately). Prestige multiplier affects both passive income and offline earnings.
 
-14. **Adding a new API endpoint** requires adding it to `server/index.js`. If it needs database access, add the query function to `server/db.js`. Auth-protected routes should check `req.isAuthenticated()`.
+14. **Adding a new API endpoint** requires adding it to `server/index.js`. If it needs database access, add the query function to `server/db.js`. Auth-protected routes should check `req.user` (set by `authMiddleware` from the bearer token); Socket.io handlers use `socket.data.user`.
 
 15. **Socket.io** is auto-served by the server at `/socket.io/socket.io.js` — no npm package needed on the frontend. The client script is loaded with `defer` in `index.html`.
 

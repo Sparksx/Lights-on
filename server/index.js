@@ -5,11 +5,8 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
-const session = require('express-session');
-const PgSession = require('connect-pg-simple')(session);
 const { Server } = require('socket.io');
 const {
-  pool,
   initDB,
   getCurrentSeason,
   addToCosmicWar,
@@ -24,7 +21,7 @@ const {
   claimReward,
   getSeasonInfo,
 } = require('./db');
-const { passport, setupAuthRoutes } = require('./auth');
+const { authMiddleware, socketAuthMiddleware, setupAuthRoutes } = require('./auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,29 +29,16 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-// --- Session middleware (shared between Express and Socket.io) ---
-const sessionMiddleware = session({
-  store: new PgSession({ pool, tableName: 'session' }),
-  secret: process.env.SESSION_SECRET || 'lights-on-dev-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  },
-});
-
 app.set('trust proxy', 1);
-app.use(sessionMiddleware);
-app.use(passport.initialize());
-app.use(passport.session());
 app.use(express.json());
 
 // --- Auth routes ---
 setupAuthRoutes(app);
 
 // --- API routes ---
+// Every /api route knows the player (or null) from `Authorization: Bearer <hub token>`
+app.use('/api', authMiddleware);
+
 app.get('/api/cosmic-war', async (req, res) => {
   try {
     const info = await getSeasonInfo();
@@ -85,7 +69,7 @@ app.get('/api/online', (req, res) => {
 // --- Player profile (grade, streak, contribution, prestige bonus) ---
 app.get('/api/profile', async (req, res) => {
   try {
-    const user = req.session?.passport?.user;
+    const user = req.user;
     if (!user?.id) return res.json(null);
 
     const profile = await getPlayerProfile(user.id);
@@ -99,7 +83,7 @@ app.get('/api/profile', async (req, res) => {
 // --- Set contribution rate ---
 app.post('/api/contribution-rate', async (req, res) => {
   try {
-    const user = req.session?.passport?.user;
+    const user = req.user;
     if (!user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
     const rate = Number(req.body?.rate);
@@ -116,7 +100,7 @@ app.post('/api/contribution-rate', async (req, res) => {
 // --- Leaderboard ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    const user = req.session?.passport?.user;
+    const user = req.user;
     const leaderboard = await getLeaderboard(user?.id || null);
     res.json(leaderboard);
   } catch (err) {
@@ -128,7 +112,7 @@ app.get('/api/leaderboard', async (req, res) => {
 // --- Unclaimed season rewards ---
 app.get('/api/rewards', async (req, res) => {
   try {
-    const user = req.session?.passport?.user;
+    const user = req.user;
     if (!user?.id) return res.json([]);
 
     const rewards = await getUnclaimedRewards(user.id);
@@ -142,7 +126,7 @@ app.get('/api/rewards', async (req, res) => {
 // --- Claim a reward ---
 app.post('/api/rewards/claim', async (req, res) => {
   try {
-    const user = req.session?.passport?.user;
+    const user = req.user;
     if (!user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
     const rewardId = Number(req.body?.rewardId);
@@ -161,8 +145,8 @@ app.post('/api/rewards/claim', async (req, res) => {
 // --- Static files (serve the game) ---
 app.use(express.static(path.join(__dirname, '..')));
 
-// --- Socket.io: share session with websocket ---
-io.engine.use(sessionMiddleware);
+// --- Socket.io: identify the player from the handshake token ---
+io.use(socketAuthMiddleware);
 
 // Track connected players per side
 const players = new Map(); // socketId -> { userId, side, displayName, lastContribTime, contribCount }
@@ -190,8 +174,7 @@ function broadcastOnline() {
 }
 
 io.on('connection', (socket) => {
-  const session = socket.request.session;
-  const user = session?.passport?.user || null;
+  const user = socket.data.user || null;
 
   // Player joins with their current game mode
   socket.on('join', async (data) => {

@@ -43,6 +43,9 @@ import {
   notifySideChange,
   setContributionRate,
   reportLumens,
+  authFetch,
+  login,
+  logout,
 } from './multiplayer.js';
 import { setServerAvailable, isOnboardingDone, isMultiplayerActive, checkOnboarding } from './onboarding.js';
 import { showSeasonEnd, showSeasonEndBroadcast } from './season-end.js';
@@ -228,6 +231,7 @@ var mpOverlayRateBtns = document.querySelectorAll('.mp-rate-btn');
 var mpOverlayLeaderboardBtn = document.getElementById('mp-overlay-leaderboard-btn');
 var mpBalanceGrade = document.getElementById('mp-balance-grade');
 var mpOverlayLogin = document.getElementById('mp-overlay-login');
+var mpOverlayLoginBtn = document.getElementById('mp-overlay-login-btn');
 
 // Leaderboard DOM
 var mpLeaderboard = document.getElementById('mp-leaderboard');
@@ -406,10 +410,20 @@ mpOverlayBackdrop.addEventListener('click', function (e) {
 // --- Logout from overlay ---
 mpOverlayLogout.addEventListener('click', function (e) {
   e.stopPropagation();
-  fetch('/auth/logout', { method: 'POST' }).then(function () {
-    mp.user = null;
-    mp.profile = null;
+  logout().then(function () {
     updateMultiplayerUI(mp);
+  });
+});
+
+// --- Login from overlay (shared neufmois.app login) ---
+mpOverlayLoginBtn.addEventListener('click', function (e) {
+  e.stopPropagation();
+  login().then(function (redirected) {
+    if (!redirected) {
+      // Hub unreachable (offline, or game not served from *.neufmois.app)
+      var loginText = document.getElementById('mp-overlay-login-text');
+      if (loginText) loginText.textContent = 'Connexion indisponible pour le moment';
+    }
   });
 });
 
@@ -467,7 +481,7 @@ mpLeaderboardTabs.forEach(function (tab) {
 function fetchLeaderboard(retries) {
   if (retries === undefined) retries = 2;
   mpLeaderboardList.innerHTML = '<div style="opacity:0.3;text-align:center;padding:20px;">Chargement\u2026</div>';
-  fetch('/api/leaderboard')
+  authFetch('/api/leaderboard')
     .then(function (res) {
       return res.json();
     })
@@ -570,7 +584,11 @@ onStreakChange(function (info) {
 // --- Onboarding completion callback ---
 window._onOnboardingDone = function (choice) {
   if (choice === 'connected') {
-    // User chose to connect — OAuth redirect will handle the rest
+    // User chose to connect — normally the hub login redirect handles the rest;
+    // if the hub was unreachable, reveal the multiplayer UI (login prompt inside)
+    mpBalance.classList.remove('hidden');
+    if (mp.connected) mpBalance.classList.add('online');
+    updateMultiplayerUI(mp);
   } else {
     // User chose solo — hide multiplayer permanently for this session
     mpBalance.classList.add('hidden');
@@ -583,7 +601,7 @@ window._onOnboardingDone = function (choice) {
     .then(function () {
       setServerAvailable(true);
 
-      // If user is already logged in (returned from OAuth), mark onboarding done
+      // If user is already logged in (e.g. via neufmois.app), mark onboarding done
       if (mp.user) {
         try {
           localStorage.setItem('light-mp-onboarding', 'connected');
