@@ -2,6 +2,7 @@
 'use strict';
 
 import { gameMode } from './state.js';
+import { authHeaders, getHubAccessToken, hubLogin, hubLogout, onHubAuthChange } from './hub-auth.js';
 
 // --- Multiplayer state ---
 export const mp = {
@@ -54,25 +55,65 @@ export function onStreakChange(fn) {
   streakChangeListeners.push(fn);
 }
 
-// --- Auth ---
+// --- Auth (shared neufmois.app login) ---
+
+// fetch() that forwards the hub access token as `Authorization: Bearer`
+export async function authFetch(url, options) {
+  const token = await getHubAccessToken();
+  const opts = Object.assign({}, options || {});
+  opts.headers = authHeaders(token, opts.headers);
+  return fetch(url, opts);
+}
+
 export async function fetchUser() {
   try {
-    const res = await fetch('/auth/me');
-    const data = await res.json();
-    mp.user = data;
+    const token = await getHubAccessToken();
+    if (!token) {
+      mp.user = null;
+    } else {
+      const res = await fetch('/auth/me', { headers: authHeaders(token) });
+      mp.user = await res.json();
+    }
     notify();
   } catch (_) {
     mp.user = null;
   }
 }
 
+// Redirect to the hub login page (returns false if the hub is unreachable)
+export function login() {
+  return hubLogin();
+}
+
 export async function logout() {
-  try {
-    await fetch('/auth/logout', { method: 'POST' });
-    mp.user = null;
-    mp.profile = null;
-    notify();
-  } catch (_) {}
+  await hubLogout();
+  mp.user = null;
+  mp.profile = null;
+  reconnectSocket();
+  notify();
+}
+
+// Re-check who is logged in (hub login/logout in another tab, token refresh…)
+async function refreshAuth() {
+  const previousId = mp.user ? mp.user.id : null;
+  await fetchUser();
+  const currentId = mp.user ? mp.user.id : null;
+  if (previousId === currentId) return;
+  if (!mp.user) mp.profile = null;
+  // Identity changed: reconnect so the server re-reads the handshake token
+  reconnectSocket();
+  if (mp.user) {
+    await fetchProfile();
+    await fetchRewards();
+  }
+  notify();
+}
+
+function reconnectSocket() {
+  if (mp.socket) {
+    mp.socket.disconnect();
+    mp.socket.connect();
+  }
 }
 
 // --- Cosmic War (REST fallback for initial load) ---
@@ -93,7 +134,7 @@ export async function fetchCosmicWar() {
 // --- Fetch player profile (grade, streak, etc.) ---
 export async function fetchProfile() {
   try {
-    const res = await fetch('/api/profile');
+    const res = await authFetch('/api/profile');
     const data = await res.json();
     if (data) {
       mp.profile = data;
@@ -106,7 +147,7 @@ export async function fetchProfile() {
 // --- Fetch unclaimed rewards ---
 export async function fetchRewards() {
   try {
-    const res = await fetch('/api/rewards');
+    const res = await authFetch('/api/rewards');
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
       mp.pendingRewards = data;
@@ -156,7 +197,14 @@ export function connectSocket() {
   // Socket.io is loaded from the server (auto-served by socket.io)
   if (typeof io === 'undefined') return;
 
-  const socket = io();
+  // The access token is re-read on every (re)connection
+  const socket = io({
+    auth: function (cb) {
+      getHubAccessToken().then(function (token) {
+        cb(token ? { token: token } : {});
+      });
+    },
+  });
   mp.socket = socket;
 
   socket.on('connect', () => {
@@ -282,4 +330,5 @@ export async function initMultiplayer() {
   loadOfflineQueue();
   connectSocket();
   setInterval(flushLumens, REPORT_INTERVAL);
+  onHubAuthChange(refreshAuth);
 }

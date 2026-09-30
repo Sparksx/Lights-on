@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lights-on-v10';
+const CACHE_NAME = 'lights-on-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const ASSETS = [
   './js/multiplayer.js',
   './js/onboarding.js',
   './js/season-end.js',
+  './js/hub-auth.js',
   './js/effects/halos.js',
   './js/effects/stars.js',
   './js/effects/constellations.js',
@@ -57,6 +58,12 @@ self.addEventListener('activate', (e) => {
 // update cache with fresh response, fall back to cache if offline.
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
+
+  // Only handle same-origin requests: cross-origin ones (the neufmois.app hub
+  // login module, Supabase auth calls) go straight to the network, never cached
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
   // Never cache API, auth, or socket.io requests
   if (NO_CACHE_PATTERNS.some((p) => url.pathname.startsWith(p))) {
