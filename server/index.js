@@ -20,8 +20,10 @@ const {
   getUnclaimedRewards,
   claimReward,
   getSeasonInfo,
+  deleteUserBySupabaseId,
 } = require('./db');
-const { authMiddleware, socketAuthMiddleware, setupAuthRoutes } = require('./auth');
+const { authMiddleware, socketAuthMiddleware, setupAuthRoutes, verifyToken, forgetUser } = require('./auth');
+const { accountCors, createDeleteAccountHandler } = require('./account');
 
 const app = express();
 const server = http.createServer(app);
@@ -34,6 +36,23 @@ app.use(express.json());
 
 // --- Auth routes ---
 setupAuthRoutes(app);
+
+// --- Account deletion (GDPR, called by the neufmois.app hub) ---
+// Registered before the generic /api auth middleware so it never (re)creates the user row.
+// DELETE /api/account with `Authorization: Bearer <hub access token>` → 204 (even if no row), 401 if invalid.
+app.options('/api/account', accountCors);
+app.delete(
+  '/api/account',
+  accountCors,
+  createDeleteAccountHandler({
+    verifyToken,
+    deleteUser: (sub) => deleteUserBySupabaseId(sub),
+    onDeleted: ({ sub, userId }) => {
+      forgetUser(sub);
+      if (userId) disconnectUser(userId);
+    },
+  }),
+);
 
 // --- API routes ---
 // Every /api route knows the player (or null) from `Authorization: Bearer <hub token>`
@@ -163,6 +182,15 @@ function countBySide(side) {
     if (p.side === side) count++;
   }
   return count;
+}
+
+// Drop live sockets of a deleted player (they reconnect as anonymous / re-authenticate)
+function disconnectUser(userId) {
+  for (const socket of io.sockets.sockets.values()) {
+    if (socket.data.user?.id !== userId) continue;
+    socket.data.user = null;
+    socket.disconnect(true); // 'disconnect' handler removes it from `players`
+  }
 }
 
 function broadcastOnline() {

@@ -126,6 +126,56 @@ body {
   transition: opacity 0.2s ease;
 }
 
+/* === LEGAL LINKS (mode select + upgrade panel) === */
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+}
+
+.legal-links a {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.5;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.legal-links a:hover,
+.legal-links a:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Mode select: bottom of the split, readable on both halves via difference blending */
+#mode-legal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 16px calc(10px + env(safe-area-inset-bottom));
+  z-index: 102;
+  color: #fff;
+  mix-blend-mode: difference;
+}
+
+#mode-select.choosing #mode-legal {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Upgrade panel: below the reset/debug row */
+#panel-legal {
+  color: rgba(255, 255, 255, 0.6);
+  margin: 10px auto calc(4px + env(safe-area-inset-bottom));
+}
+
 /* === GAME AREA === */
 #game-area {
   position: relative;
@@ -876,6 +926,10 @@ body.mode-off .upgrade-item.affordable:not(.maxed) {
   50% {
     border-color: rgba(0, 0, 0, 1);
   }
+}
+
+body.mode-off #panel-legal {
+  color: rgba(0, 0, 0, 0.6);
 }
 
 body.mode-off #reset-btn {

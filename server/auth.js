@@ -148,4 +148,20 @@ function setupAuthRoutes(app) {
   });
 }
 
-module.exports = { authenticate, authMiddleware, socketAuthMiddleware, setupAuthRoutes, ISSUER };
+/**
+ * Forget a player's cached identity (e.g. after account deletion).
+ * @param {string} sub
+ */
+function forgetUser(sub) {
+  userCache.delete(sub);
+}
+
+module.exports = {
+  authenticate,
+  verifyToken,
+  forgetUser,
+  authMiddleware,
+  socketAuthMiddleware,
+  setupAuthRoutes,
+  ISSUER,
+};

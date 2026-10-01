@@ -78,6 +78,7 @@ The game includes a multiplayer "Cosmic War" feature where players logged in wit
     ├── index.js            # Express + Socket.io server, API routes (~159 lines)
     ├── auth.js             # Shared neufmois.app login: Supabase JWT verification, Express/Socket.io middlewares, /auth/me
     ├── auth-utils.js       # Pure auth helpers (token extraction, display name/avatar selection)
+    ├── account.js          # DELETE /api/account handler + its CORS (GDPR deletion from the hub)
     ├── db.js               # PostgreSQL pool, schema init, queries (~100 lines)
     ├── schema.sql          # Database schema (users, cosmic_war, contributions, season_rewards) (~47 lines)
     ├── package.json        # Server dependencies
@@ -142,6 +143,7 @@ main.js (entry point)
 | `/api/leaderboard` | GET | Season top 20 per side + own rank if authenticated |
 | `/api/rewards` | GET | Unclaimed season rewards (auth) |
 | `/api/rewards/claim` | POST | Claim a season reward (auth) |
+| `/api/account` | DELETE | GDPR erasure called by the neufmois.app hub: `Authorization: Bearer <hub token>` required, deletes the `users` row (cascade) → `204` (also when no row), `401` if token missing/invalid. CORS limited to `https://neufmois.app` and `http://localhost:3000` (`server/account.js`) |
 | `/auth/me` | GET | Current player `{ id, displayName, avatar }` from the bearer token (or `null`) |
 
 "(auth)" routes read `req.user`, resolved from `Authorization: Bearer <hub access token>` by `authMiddleware` (mounted on `/api`). Login/logout happen on the hub, not on this server.
@@ -212,7 +214,7 @@ After reaching victory, players can "Cross Over" to switch modes with a permanen
 
 ### Service Worker (`sw.js`)
 
-- Cache name: `lights-on-v11`
+- Cache name: `lights-on-v12`
 - Strategy: Network-first with cache fallback
 - Caches all static assets (HTML, CSS, all JS modules, icons, manifest)
 - Excludes `/api/`, `/auth/`, `/socket.io/` from caching
@@ -329,7 +331,7 @@ Vite bundles all JS modules, CSS, and assets into `dist/`. The server still serv
 
 - **Railway**: Configured via `railway.json` — uses Railpack builder, starts `node server/index.js`, healthcheck at `/api/online`
 - **Heroku**: Configured via `Procfile` — `web: cd server && node index.js`
-- Update the `CACHE_NAME` version string in `sw.js` when making changes (currently `'lights-on-v11'`)
+- Update the `CACHE_NAME` version string in `sw.js` when making changes (currently `'lights-on-v12'`)
 - Update the `ASSETS` array in `sw.js` if new files are added
 - The Service Worker's `skipWaiting()` + `clients.claim()` ensures immediate activation
 - The client auto-reloads when a new SW takes control

@@ -38,6 +38,21 @@ async function findOrCreateUserBySupabaseId(supabaseId, profile) {
   return result.rows[0];
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Delete a player and all their data (GDPR erasure requested from the neufmois.app hub).
+ * contributions and season_rewards are removed by ON DELETE CASCADE.
+ * @param {string} supabaseId - verified JWT `sub` (UUID)
+ * @param {{ query: Function }} [db] - query executor (defaults to the pool; injectable for tests)
+ * @returns {Promise<string|null>} the deleted local user id, or null if no row existed
+ */
+async function deleteUserBySupabaseId(supabaseId, db = pool) {
+  if (typeof supabaseId !== 'string' || !UUID_RE.test(supabaseId)) return null;
+  const result = await db.query('DELETE FROM users WHERE supabase_id = $1 RETURNING id', [supabaseId]);
+  return result.rows[0]?.id || null;
+}
+
 /**
  * Get the current active season of the cosmic war.
  */
@@ -533,6 +548,7 @@ module.exports = {
   pool,
   initDB,
   findOrCreateUserBySupabaseId,
+  deleteUserBySupabaseId,
   getCurrentSeason,
   addToCosmicWar,
   recordContribution,
