@@ -55,4 +55,19 @@ function createDeleteAccountHandler({ verifyToken, deleteUser, onDeleted }) {
   };
 }
 
-module.exports = { accountCors, createDeleteAccountHandler, ACCOUNT_ALLOWED_ORIGINS };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Delete a player's row (contributions and season rewards cascade). Kept here, free of `pg`,
+ * so it can be unit-tested with a fake executor; db.js calls it with the pool.
+ * @param {string} supabaseId - verified JWT `sub`
+ * @param {{ query: Function }} db - query executor
+ * @returns {Promise<string|null>} the deleted local user id, or null if no row existed
+ */
+async function deleteUserRow(supabaseId, db) {
+  if (typeof supabaseId !== 'string' || !UUID_RE.test(supabaseId)) return null;
+  const result = await db.query('DELETE FROM users WHERE supabase_id = $1 RETURNING id', [supabaseId]);
+  return result.rows[0]?.id || null;
+}
+
+module.exports = { accountCors, createDeleteAccountHandler, deleteUserRow, ACCOUNT_ALLOWED_ORIGINS };

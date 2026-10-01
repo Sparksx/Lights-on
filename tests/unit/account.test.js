@@ -1,10 +1,14 @@
-// === Tests — GDPR account deletion (server/account.js + deleteUserBySupabaseId in server/db.js) ===
+// === Tests — GDPR account deletion (server/account.js + deleteUserRow in server/account.js) ===
 import { describe, it, expect, vi } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { accountCors, createDeleteAccountHandler, ACCOUNT_ALLOWED_ORIGINS } = require('../../server/account.js');
-const { deleteUserBySupabaseId } = require('../../server/db.js');
+const {
+  accountCors,
+  createDeleteAccountHandler,
+  deleteUserRow,
+  ACCOUNT_ALLOWED_ORIGINS,
+} = require('../../server/account.js');
 
 const SUB = '6f1c2b0e-9a4d-4c1e-8f3a-2b7d5e9c1a00';
 
@@ -128,22 +132,22 @@ describe('DELETE /api/account handler', () => {
   });
 });
 
-describe('deleteUserBySupabaseId', () => {
+describe('deleteUserRow', () => {
   it('deletes by supabase_id and returns the local id', async () => {
     const db = { query: vi.fn(async () => ({ rows: [{ id: 'local-user-id' }] })) };
-    await expect(deleteUserBySupabaseId(SUB, db)).resolves.toBe('local-user-id');
+    await expect(deleteUserRow(SUB, db)).resolves.toBe('local-user-id');
     expect(db.query).toHaveBeenCalledWith('DELETE FROM users WHERE supabase_id = $1 RETURNING id', [SUB]);
   });
 
   it('returns null when no row matched', async () => {
     const db = { query: vi.fn(async () => ({ rows: [] })) };
-    await expect(deleteUserBySupabaseId(SUB, db)).resolves.toBeNull();
+    await expect(deleteUserRow(SUB, db)).resolves.toBeNull();
   });
 
   it('does not query for a non-UUID sub', async () => {
     const db = { query: vi.fn() };
-    await expect(deleteUserBySupabaseId('not-a-uuid', db)).resolves.toBeNull();
-    await expect(deleteUserBySupabaseId(undefined, db)).resolves.toBeNull();
+    await expect(deleteUserRow('not-a-uuid', db)).resolves.toBeNull();
+    await expect(deleteUserRow(undefined, db)).resolves.toBeNull();
     expect(db.query).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 'use strict';
 
 const { Pool } = require('pg');
+const { deleteUserRow } = require('./account');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,8 +39,6 @@ async function findOrCreateUserBySupabaseId(supabaseId, profile) {
   return result.rows[0];
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Delete a player and all their data (GDPR erasure requested from the neufmois.app hub).
  * contributions and season_rewards are removed by ON DELETE CASCADE.
@@ -48,9 +47,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * @returns {Promise<string|null>} the deleted local user id, or null if no row existed
  */
 async function deleteUserBySupabaseId(supabaseId, db = pool) {
-  if (typeof supabaseId !== 'string' || !UUID_RE.test(supabaseId)) return null;
-  const result = await db.query('DELETE FROM users WHERE supabase_id = $1 RETURNING id', [supabaseId]);
-  return result.rows[0]?.id || null;
+  return deleteUserRow(supabaseId, db);
 }
 
 /**
